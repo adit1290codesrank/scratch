@@ -4,6 +4,7 @@
 #include "../layer/layer.h"
 #include "loss.h"
 #include <vector>
+#include <string>
 
 class Network
 {
@@ -24,4 +25,7 @@ class Network
         void backward(Tensor dY);
 
         float train_step(const Tensor& X,const Tensor& Y);
+
+        void save_weights(const std::string& filepath);
+        void load_weights(const std::string& filepath);
 };

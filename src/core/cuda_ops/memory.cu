@@ -33,3 +33,15 @@ void raw_randn(float* ptr,size_t size,float mean,float std)
     curandGenerateNormal(gen,ptr,size,mean,std);
     curandDestroyGenerator(gen);
 }
+
+void raw_copy_from_host(float* dest, const float* src, size_t bytes)
+{
+    cudaError_t err=cudaMemcpy(dest,src,bytes,cudaMemcpyHostToDevice);
+    if(err != cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
+}
+
+void raw_copy_to_host(float* dest,const float* src,size_t bytes)
+{
+    cudaError_t err=cudaMemcpy(dest,src,bytes,cudaMemcpyDeviceToHost);
+    if(err != cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
+}

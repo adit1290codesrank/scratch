@@ -1,4 +1,7 @@
 #include "../../include/core/network.h"
+#include <string>
+#include <fstream>
+#include <stdexcept>
 
 void Network::add_layer(Layer* layer){this->layers.push_back(layer);}
 
@@ -22,3 +25,38 @@ float Network::train_step(const Tensor& X,const Tensor& Y)
 }
 
 Network::~Network(){for(auto layer:layers)delete layer;delete optimizer;delete loss;}
+
+void Network::save_weights(const std::string& filepath)
+{
+    std::ofstream file(filepath,std::ios::binary);
+    if (!file.is_open()) throw std::runtime_error("Cannot open file for saving weights!");
+
+    for(auto layer:layers)
+    {
+        for(auto weight:layer->get_weights())
+        {
+            size_t size=weight->total_elements();
+            std::vector<float> data(size);
+            weight->copy_to_host(data.data());
+            file.write(reinterpret_cast<char*>(data.data()),size*sizeof(float));
+        }
+    }
+    file.close();
+}
+
+void Network::load_weights(const std::string& filepath)
+{
+    std::ifstream file(filepath,std::ios::binary);
+    if (!file.is_open()) throw std::runtime_error("Cannot open file for loading weights!");
+    for (auto layer:this->layers) 
+    {
+        for (auto weight:layer->get_weights()) 
+        {
+            size_t size = weight->total_elements();
+            std::vector<float> data(size);
+            file.read(reinterpret_cast<char*>(data.data()),size*sizeof(float));
+            weight->copy_from_host(data.data());
+        }
+    }
+    file.close();
+}

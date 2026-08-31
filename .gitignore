@@ -18,3 +18,6 @@ tmpxft_*
 .vscode/
 
 *.log
+
+
+weights/

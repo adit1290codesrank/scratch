@@ -31,5 +31,7 @@ class Tensor
         Tensor operator*(const Tensor& other) const;
         Tensor operator+(const Tensor& other) const;
         Tensor clone() const;
+        void copy_from_host(const float* host_data) const;
+        void copy_to_host(float* host_data) const;
 };
 

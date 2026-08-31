@@ -45,6 +45,19 @@ Tensor Tensor::clone() const
     return temp;
 }
 
+void Tensor::copy_from_host(const float* host_data) const
+{
+    size_t bytes=this->total_elements()*sizeof(float);
+    copy_from_host_malloc(this->get_data(),host_data,bytes);
+}
+
+void Tensor::copy_to_host(float* host_data) const
+{
+    size_t bytes=this->total_elements()*sizeof(float);
+    copy_to_host_malloc(host_data,this->get_data(),bytes);
+}
+
 Tensor Tensor::operator*(const Tensor& other) const{return multiply(*this,false,other,false);};
 
 Tensor Tensor::operator+(const Tensor& other) const{return add(*this,other);};
+
