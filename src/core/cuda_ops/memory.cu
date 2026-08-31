@@ -1,6 +1,7 @@
 #include "../../../include/core/memory_ops.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
+#include <curand.h>
 
 float* raw_device_malloc(size_t bytes)
 {
@@ -22,4 +23,13 @@ void raw_copy_malloc(float *dest,float *src,size_t bytes)
 {
     cudaError_t err = cudaMemcpy(dest,src,bytes,cudaMemcpyDeviceToDevice);
     if(err != cudaSuccess) throw std::runtime_error("cudaMemcpy failed");
+}
+
+void raw_randn(float* ptr,size_t size,float mean,float std)
+{
+    curandGenerator_t gen;
+    curandCreateGenerator(&gen,CURAND_RNG_PSEUDO_DEFAULT);
+    curandSetPseudoRandomGeneratorSeed(gen,1234ULL);
+    curandGenerateNormal(gen,ptr,size,mean,std);
+    curandDestroyGenerator(gen);
 }

@@ -27,6 +27,7 @@ class Tensor
 
         Tensor reshape(std::vector<int> shape) const;
         static Tensor zeros(std::vector<int> shape);//belongs to class not object
+        static Tensor randn(std::vector<int> shape,float mean,float std);
         Tensor operator*(const Tensor& other) const;
         Tensor operator+(const Tensor& other) const;
         Tensor clone() const;

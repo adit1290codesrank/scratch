@@ -30,6 +30,13 @@ Tensor Tensor::zeros(std::vector<int> shape)
     return temp;
 }
 
+Tensor Tensor::randn(std::vector<int> shape,float mean,float std)
+{
+    Tensor temp(shape);
+    randn_malloc(temp.get_data(),temp.total_elements(),mean,std);
+    return temp;
+}
+
 Tensor Tensor::clone() const
 {
     Tensor temp(this->shape);
