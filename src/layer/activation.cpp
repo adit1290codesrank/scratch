@@ -15,3 +15,13 @@ Tensor ReLU::backward(const Tensor& dY)
     relu_backward(dY,this->cached_X,dX);
     return dX;
 }
+
+Tensor Softmax::forward(const Tensor& X)
+{
+    this->cached_X=X;
+    Tensor Y=X.clone();
+    softmax_forward(Y);
+    return Y;
+}
+
+Tensor Softmax::backward(const Tensor& dY){return dY;}

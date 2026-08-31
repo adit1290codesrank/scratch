@@ -28,3 +28,29 @@ void relu_backward(const Tensor& dY,const Tensor& cached_X,Tensor& dX)
     relu_backward_kernel<<<blocks,threads>>>(dY.get_data(),cached_X.get_data(),dX.get_data(),total);
 }
 
+
+__global__ void softmax_forward_kernel(float *X,int rows,int cols)
+{
+    int index=blockDim.x*blockIdx.x+threadIdx.x;
+    if(index<rows)
+    {
+        float max_=X[index*cols];
+        for(int i=0;i<cols;i++)if(X[i+index*cols]>max_)max_=X[i+index*cols];
+        
+        float sum=0.0;
+        for(int i=0;i<cols;i++)
+        {
+            X[i+index*cols]=expf(X[i+index*cols]-max_);
+            sum+=X[i+index*cols];
+        }
+        for(int i=0;i<cols;i++)X[i+index*cols]/=sum;
+    }
+}
+
+void softmax_forward(Tensor& X)
+{
+    int rows=X.rows(),cols=X.cols();
+    int threads=256;
+    int blocks=(rows+threads-1)/threads;
+    softmax_forward_kernel<<<blocks,threads>>>(X.get_data(),rows,cols);
+}

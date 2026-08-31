@@ -21,3 +21,9 @@ class ReLU:public Activation
         Tensor backward(const Tensor& dY) override;
 };
 
+class Softmax:public Activation
+{
+    public:
+        Tensor forward(const Tensor& X) override;
+        Tensor backward(const Tensor& dY) override;
+};

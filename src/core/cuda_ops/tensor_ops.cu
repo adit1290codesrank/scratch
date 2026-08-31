@@ -92,3 +92,38 @@ Tensor sum_rows(const Tensor& dY)
     sum_rows_kernel<<<blocks,threads>>>(dY.get_data(),db.get_data(),n,m);
     return db;
 }
+
+__global__ void add_bias_conv_kernel(float *Y,const float *b,int cout,int s)
+{
+    int index=blockDim.x*blockIdx.x+threadIdx.x;
+    if(index<cout*s) Y[index]+=b[index/s];
+}
+
+void add_bias_conv(Tensor& Yflat,const Tensor& b)
+{
+    int total=Yflat.total_elements();
+    int threads=256;
+    int blocks=(threads+total-1)/threads;
+    add_bias_conv_kernel<<<blocks,threads>>>(Yflat.get_data(),b.get_data(),Yflat.rows(),Yflat.cols());
+}
+
+__global__ void sum_spatial_kernel(const float *dYflat,float *db,int cout,int s)
+{
+    int index=blockDim.x*blockIdx.x+threadIdx.x;
+    if(index<cout)
+    {
+        float sum=0.0f;
+        for(int i=0;i<s;i++) sum+=dYflat[index*s+i];
+        db[index]=sum;
+    }
+}
+
+Tensor sum_spatial(const Tensor& dYflat)
+{
+    int cout=dYflat.rows(),s=dYflat.cols();
+    Tensor db({1,cout});
+    int threads=256;
+    int blocks=(cout+threads-1)/threads;
+    sum_spatial_kernel<<<blocks,threads>>>(dYflat.get_data(),db.get_data(),cout,s);
+    return db;
+}
