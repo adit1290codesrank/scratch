@@ -1,0 +1,3 @@
+MNIST
+
+First Run - Training 98.76% and Testing 98.55%

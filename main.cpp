@@ -1,77 +1,90 @@
 #include <iostream>
+#include <iomanip>
+#include <vector>
 #include "include/core/network.h"
+#include "include/layer/conv2d.h"
+#include "include/layer/maxpool.h"
+#include "include/layer/flatten.h"
 #include "include/layer/linear.h"
 #include "include/layer/activation.h"
-#include "include/core/loss.h"
-#include "include/core/optimizer.h"
+#include "include/core/dataset.h"
 
-int main() 
+int main()
 {
-    std::cout << "Neural Network Test"<<std::endl;
-
+    // 1. Build the exact same architecture
     Network net;
-    net.add_layer(new Linear(1,64));
+    net.add_layer(new Conv2D(1,8,3,1,1));
     net.add_layer(new ReLU());
-    net.add_layer(new Linear(64,64));
+    net.add_layer(new MaxPool(2,2));
+    net.add_layer(new Conv2D(8,16,3,1,1));
     net.add_layer(new ReLU());
-    net.add_layer(new Linear(64,1));
+    net.add_layer(new MaxPool(2,2));
+    net.add_layer(new Flatten());
+    net.add_layer(new Linear(784,10));
+    net.add_layer(new Softmax());
 
-    Optimizer* optimizer = new Adam(net.get_layers(),0.01f);
-    Loss* loss=new MSELoss();
+    // 2. Load the trained weights
+    std::cout << "Loading trained weights from mnist_model.bin..." << std::endl;
+    net.load_weights("weights/mnist_model_1.bin");
 
-    net.compile(optimizer,loss);
+    // 3. Load the 10,000 image TEST Dataset
+    Tensor X_test, Y_test;
+    Dataset::load_mnist("data/t10k-images.idx3-ubyte", "data/t10k-labels.idx1-ubyte", X_test, Y_test);
 
-    int size=128;
-    std::vector<float> HX(size),HY(size);
-    for(int i=0;i<size;i++)
+    int total_samples = X_test.shape[0];
+    int batch_size = 128;
+    int correct_predictions = 0;
+
+    std::cout << "Evaluating on " << total_samples << " unseen test images..." << std::endl;
+
+    for(int start = 0; start < total_samples; start += batch_size)
     {
-        float x=((float)rand()/RAND_MAX)*2.0f*3.14159f-3.14159f;
-        HX[i]=x;HY[i]=sinf(x);
-    }
-    Tensor X=Tensor::zeros({size,1}),Y=Tensor::zeros({size,1});
-    X.copy_from_host(HX.data());Y.copy_from_host(HY.data());
-    
-    for(int i=0;i<2000;i++)
-    {
-        float loss_=net.train_step(X,Y);
-        if(i%100==0) std::cout<<"Epoch : " << i << " Loss : " << loss_ << std::endl;
+        int end = start + batch_size > total_samples ? total_samples : start + batch_size;
+        int current_batch = end - start;
+        
+        Tensor X_batch = X_test.slice(start, end);
+        Tensor Y_batch = Y_test.slice(start, end);
+
+        // Forward pass ONLY (No backward, no gradients)
+        Tensor pred = net.forward(X_batch);
+
+        // Download predictions and true labels to CPU RAM to calculate accuracy
+        std::vector<float> h_pred(current_batch * 10);
+        std::vector<float> h_Y(current_batch * 10);
+        
+        pred.copy_to_host(h_pred.data());
+        Y_batch.copy_to_host(h_Y.data());
+
+        for(int i = 0; i < current_batch; i++) {
+            int best_pred = 0;
+            float max_prob = -1.0f;
+            
+            int true_label = 0;
+            float max_true = -1.0f;
+
+            // Find Argmax for Prediction and Ground Truth
+            for(int j = 0; j < 10; j++) {
+                if(h_pred[i * 10 + j] > max_prob) {
+                    max_prob = h_pred[i * 10 + j];
+                    best_pred = j;
+                }
+                if(h_Y[i * 10 + j] > max_true) {
+                    max_true = h_Y[i * 10 + j];
+                    true_label = j;
+                }
+            }
+
+            if(best_pred == true_label) {
+                correct_predictions++;
+            }
+        }
     }
 
-    std::cout << "\n--- Testing Predictions ---" << std::endl;
+    float accuracy = ((float)correct_predictions / total_samples) * 100.0f;
+    std::cout << "\n======================================" << std::endl;
+    std::cout << "Test Accuracy: " << correct_predictions << " / " << total_samples << std::endl;
+    std::cout << "Final Score:   " << std::fixed << std::setprecision(2) << accuracy << "%" << std::endl;
+    std::cout << "======================================" << std::endl;
     
-    // 1. Test Specific Known Values
-    float test_vals[] = {-3.14159f / 2.0f, 0.0f, 3.14159f / 2.0f}; // -PI/2, 0, PI/2
-    Tensor X_test = Tensor::zeros({3, 1});
-    X_test.copy_from_host(test_vals);
-    
-    Tensor Y_pred = net.forward(X_test);
-    float h_Y_pred[3];
-    Y_pred.copy_to_host(h_Y_pred); // Bring predictions back to CPU
-    
-    std::cout << "sin(-PI/2) | True: -1.0 | Pred: " << h_Y_pred[0] << std::endl;
-    std::cout << "sin(0)     | True:  0.0 | Pred: " << h_Y_pred[1] << std::endl;
-    std::cout << "sin(PI/2)  | True:  1.0 | Pred: " << h_Y_pred[2] << std::endl;
-    // 2. Calculate R^2 Score on the entire dataset
-    Tensor Y_train_pred = net.forward(X);
-    std::vector<float> h_Y_train_pred(size);
-    Y_train_pred.copy_to_host(h_Y_train_pred.data());
-    float ss_res = 0.0f;
-    float ss_tot = 0.0f;
-    float mean_y = 0.0f;
-    
-    // Calculate mean of true Y
-    for(int i = 0; i < size; i++) mean_y += HY[i];
-    mean_y /= size;
-    // Calculate SS_res and SS_tot
-    for(int i = 0; i < size; i++) {
-        ss_res += (HY[i] - h_Y_train_pred[i]) * (HY[i] - h_Y_train_pred[i]);
-        ss_tot += (HY[i] - mean_y) * (HY[i] - mean_y);
-    }
-    
-    float r_squared = 1.0f - (ss_res / ss_tot);
-    std::cout << "\nR^2 Score: " << r_squared << " (1.0 is a perfect fit)" << std::endl;
-    std::cout << "\nSaving model weights..." << std::endl;
-    net.save_weights("./weights/sine_model.bin");
-    std::cout << "Model successfully saved to sine_model.bin!" << std::endl;
     return 0;
 }

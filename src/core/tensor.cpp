@@ -61,3 +61,15 @@ Tensor Tensor::operator*(const Tensor& other) const{return multiply(*this,false,
 
 Tensor Tensor::operator+(const Tensor& other) const{return add(*this,other);};
 
+Tensor Tensor::slice(int start,int end) const
+{
+    std::vector<int> new_shape=shape;
+    new_shape[0]=end-start;
+    
+    Tensor temp=Tensor::zeros(new_shape);
+    size_t bytes=temp.total_elements()*sizeof(float);
+    size_t offset=start*(total_elements()/shape[0]);
+    
+    copy_malloc(temp.get_data(),get_data()+offset,bytes);
+    return temp;
+}
