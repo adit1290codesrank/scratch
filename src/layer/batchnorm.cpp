@@ -35,7 +35,7 @@ Tensor BatchNorm::backward(const Tensor& dY)
 
     Tensor dX=Tensor::zeros(cached_X.shape);
 
-    bn_backwards_param_gpu(dY.get_data(),cached_X_.get_data(),dg.get_data(),db.get_data(),n,c,s);
+    bn_backward_param_gpu(dY.get_data(),cached_X_.get_data(),dg.get_data(),db.get_data(),n,c,s);
     bn_backward_gpu(dY.get_data(),cached_X_.get_data(),cached_bvar.get_data(),g.get_data(),dX.get_data(),dg.get_data(),db.get_data(),n,c,s,e);
     return dX;
 }

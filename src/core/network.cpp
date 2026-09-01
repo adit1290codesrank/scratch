@@ -40,6 +40,13 @@ void Network::save_weights(const std::string& filepath)
             weight->copy_to_host(data.data());
             file.write(reinterpret_cast<char*>(data.data()),size*sizeof(float));
         }
+        for(auto state:layer->get_states())
+        {
+            size_t size=state->total_elements();
+            std::vector<float> data(size);
+            state->copy_to_host(data.data());
+            file.write(reinterpret_cast<char*>(data.data()),size*sizeof(float));
+        }
     }
     file.close();
 }
@@ -56,6 +63,13 @@ void Network::load_weights(const std::string& filepath)
             std::vector<float> data(size);
             file.read(reinterpret_cast<char*>(data.data()),size*sizeof(float));
             weight->copy_from_host(data.data());
+        }
+        for (auto state:layer->get_states()) 
+        {
+            size_t size = state->total_elements();
+            std::vector<float> data(size);
+            file.read(reinterpret_cast<char*>(data.data()),size*sizeof(float));
+            state->copy_from_host(data.data());
         }
     }
     file.close();

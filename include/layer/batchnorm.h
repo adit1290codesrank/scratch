@@ -25,6 +25,7 @@ class BatchNorm:public Layer
 
         std::vector<Tensor*> get_weights() override {return {&g,&b};}
         std::vector<Tensor*> get_grads() override {return {&dg,&db};}
+        std::vector<Tensor*> get_states() override {return {&rm,&rv};}
 
         void eval(){is_training=false;}
         void train(){is_training=true;}

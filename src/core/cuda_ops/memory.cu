@@ -19,10 +19,18 @@ void raw_zero_malloc(float *ptr, size_t bytes)
     if(err!=cudaSuccess) throw std::runtime_error("cudaMemset failed");
 }
 
-void raw_zero_malloc(float *ptr, size_t bytes)
+__global__ void one_kernel(float* ptr,int total)
 {
-    cudaError_t err=cudaMemset(ptr,1, bytes);
-    if(err!=cudaSuccess) throw std::runtime_error("cudaMemset failed");
+    int index=blockDim.x*blockIdx.x+threadIdx.x;
+    if(index<total) ptr[index]=1.0f;
+}
+
+void raw_one_malloc(float *ptr, size_t bytes)
+{
+    int total=bytes/sizeof(float);
+    int threads=256;
+    int blocks=(threads+total-1)/threads;
+    one_kernel<<<blocks,threads>>>(ptr,total);
 }
 
 void raw_copy_malloc(float *dest,float *src,size_t bytes)

@@ -64,7 +64,7 @@ void bn_running_gpu(float* r_m,float* r_v,const float* b_m,const float* b_v,floa
     bn_running_kernel<<<blocks,threads>>>(r_m,r_v,b_m,b_v,momentum,C);
 }
 
-__global__ void bn_backward_params_kernel(const float* dY,const float* X_hat,float* d_gamma,float* d_beta,int N,int C,int spatial)
+__global__ void bn_backward_param_kernel(const float* dY,const float* X_hat,float* d_gamma,float* d_beta,int N,int C,int spatial)
 {
     int c=blockIdx.x,tid=threadIdx.x,stride=blockDim.x;
     float dg=0.0f,db=0.0f;
@@ -88,7 +88,7 @@ __global__ void bn_backward_params_kernel(const float* dY,const float* X_hat,flo
     
     if(tid==0){d_gamma[c]=s_dg[0];d_beta[c]=s_db[0];}
 }
-void bn_backward_params_gpu(const float* dY,const float* X_hat,float* d_gamma,float* d_beta,int N,int C,int spatial){bn_backward_params_kernel<<<C,256>>>(dY,X_hat,d_gamma,d_beta,N,C,spatial);}
+void bn_backward_param_gpu(const float* dY,const float* X_hat,float* d_gamma,float* d_beta,int N,int C,int spatial){bn_backward_param_kernel<<<C,256>>>(dY,X_hat,d_gamma,d_beta,N,C,spatial);}
 
 __global__ void bn_backward_kernel(const float* dY,const float* X_hat,const float* var,const float* gamma,float* dX,const float* d_gamma,const float* d_beta,int N,int C,int spatial,float eps)
 {

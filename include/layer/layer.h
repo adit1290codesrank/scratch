@@ -12,4 +12,5 @@ class Layer
 
         virtual std::vector<Tensor*> get_weights() {return {};}
         virtual std::vector<Tensor*> get_grads() {return {};}
+        virtual std::vector<Tensor*> get_states() {return {};}
 };

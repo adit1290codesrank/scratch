@@ -8,14 +8,18 @@
 #include "include/layer/linear.h"
 #include "include/layer/activation.h"
 #include "include/core/dataset.h"
+#include "include/layer/batchnorm.h"
+#include "include/core/memory.h"
 
 int main()
 {
     Network net;
     net.add_layer(new Conv2D(1,8,3,1,1));
+    net.add_layer(new BatchNorm(8));
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
     net.add_layer(new Conv2D(8,16,3,1,1));
+    net.add_layer(new BatchNorm(16));
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
     net.add_layer(new Flatten());
@@ -31,6 +35,8 @@ int main()
     int batch_size=128;
     int cor=0;
 
+    ((BatchNorm*)net.get_layers()[1])->eval();
+    ((BatchNorm*)net.get_layers()[5])->eval();
 
     for(int start=0;start<total;start +=batch_size)
     {
@@ -80,5 +86,6 @@ int main()
     std::cout << "Final Score:   " << std::fixed << std::setprecision(2) << accuracy << "%" << std::endl;
     std::cout << "======================================" << std::endl;
     
+    clear_memory_pool();
     return 0;
 }

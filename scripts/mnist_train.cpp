@@ -5,9 +5,11 @@
 #include "include/layer/flatten.h"
 #include "include/layer/linear.h"
 #include "include/layer/activation.h"
+#include "include/layer/batchnorm.h"
 #include "include/core/loss.h"
 #include "include/core/optimizer.h"
 #include "include/core/dataset.h"
+#include "include/core/memory.h"
 
 
 int main()
@@ -17,10 +19,12 @@ int main()
 
     Network net;
     net.add_layer(new Conv2D(1,8,3,1,1));
+    net.add_layer(new BatchNorm(8));
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
 
     net.add_layer(new Conv2D(8,16,3,1,1));
+    net.add_layer(new BatchNorm(16)); 
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
 
@@ -57,5 +61,6 @@ int main()
     net.save_weights("weights/mnist_model_1.bin");
     std::cout<<"Weights saved to mnist_model.bin!"<<std::endl;
 
+    clear_memory_pool();
     return 0;
 }

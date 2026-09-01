@@ -40,9 +40,6 @@ void copy_to_host_malloc(float *dest,const float *src,size_t bytes) {raw_copy_to
 void clear_memory_pool()
 {
     std::lock_guard<std::mutex> lock(pool_mutex);
-    for(auto& pair : memory_pool)
-    {
-        for(float* ptr : pair.second) raw_device_free(ptr);
-    }
+    for(auto& pair:memory_pool) for(float* ptr:pair.second) raw_device_free(ptr);
     memory_pool.clear();
 }
