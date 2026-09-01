@@ -30,6 +30,14 @@ Tensor Tensor::zeros(std::vector<int> shape)
     return temp;
 }
 
+Tensor Tensor::ones(std::vector<int> shape)
+{
+    Tensor temp(shape);
+    size_t bytes=temp.total_elements()*sizeof(float);
+    one_malloc(temp.get_data(),bytes);
+    return temp;
+}
+
 Tensor Tensor::randn(std::vector<int> shape,float mean,float std)
 {
     Tensor temp(shape);

@@ -19,6 +19,12 @@ void raw_zero_malloc(float *ptr, size_t bytes)
     if(err!=cudaSuccess) throw std::runtime_error("cudaMemset failed");
 }
 
+void raw_zero_malloc(float *ptr, size_t bytes)
+{
+    cudaError_t err=cudaMemset(ptr,1, bytes);
+    if(err!=cudaSuccess) throw std::runtime_error("cudaMemset failed");
+}
+
 void raw_copy_malloc(float *dest,float *src,size_t bytes)
 {
     cudaError_t err = cudaMemcpy(dest,src,bytes,cudaMemcpyDeviceToDevice);

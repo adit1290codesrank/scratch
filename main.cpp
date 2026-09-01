@@ -8,6 +8,7 @@
 #include "include/layer/linear.h"
 #include "include/layer/activation.h"
 #include "include/core/dataset.h"
+#include "include/core/memory.h"
 
 int main()
 {
@@ -86,5 +87,6 @@ int main()
     std::cout << "Final Score:   " << std::fixed << std::setprecision(2) << accuracy << "%" << std::endl;
     std::cout << "======================================" << std::endl;
     
+    clear_memory_pool();
     return 0;
 }
