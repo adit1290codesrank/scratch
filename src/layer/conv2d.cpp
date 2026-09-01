@@ -23,27 +23,27 @@ Tensor Conv2D::forward(const Tensor& X)
 {
     this->cached_X=X;
 
-    int hin=X.shape[1],win=X.shape[2];
+    int batch=X.shape[0],hin=X.shape[2],win=X.shape[3];
     int hout=(hin-k+2*p)/s+1,wout=(win-k+2*p)/s+1;
 
-    this->cached_Xcol=Tensor::zeros({cin*k*k,hout*wout});
-    im2col_gpu(X.get_data(),cin,hin,win,k,p,s,this->cached_Xcol.get_data());
+    this->cached_Xcol=Tensor::zeros({batch,cin*k*k,hout*wout});
+    im2col_gpu(X.get_data(),batch,cin,hin,win,k,p,s,this->cached_Xcol.get_data());
 
-    Tensor Yflat=W*cached_Xcol;
+    Tensor Yflat=multiply_conv_forward(this->W,this->cached_Xcol);
     add_bias_conv(Yflat,b);
-    return Yflat.reshape({cout,hout,wout});
+    return Yflat.reshape({batch,cout,hout,wout});
 }
 
 Tensor Conv2D::backward(const Tensor& dY)
 {
-    int hin=cached_X.shape[1],win=cached_X.shape[2];
+    int batch=cached_X.shape[0],hin=cached_X.shape[2],win=cached_X.shape[3];
 
-    Tensor dYflat=dY.reshape({cout,dY.shape[1]*dY.shape[2]});
+    Tensor dYflat=dY.reshape({batch,cout,dY.shape[2]*dY.shape[3]});
     this->db=sum_spatial(dYflat);
-    this->dW=multiply(dYflat,false,this->cached_Xcol,true);
+    multiply_conv_backward_dW(this->dW,dYflat,this->cached_Xcol);
 
-    Tensor dX_col=multiply(this->W,true,dYflat,false);
+    Tensor dX_col=multiply_conv_backward_dX(this->W,dYflat);
     Tensor dX=Tensor::zeros(this->cached_X.shape);
-    col2im_gpu(dX_col.get_data(),cin,hin,win,k,p,s,dX.get_data());
+    col2im_gpu(dX_col.get_data(),batch,cin,hin,win,k,p,s,dX.get_data());
     return dX;
 }

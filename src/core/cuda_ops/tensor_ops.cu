@@ -93,37 +93,71 @@ Tensor sum_rows(const Tensor& dY)
     return db;
 }
 
-__global__ void add_bias_conv_kernel(float *Y,const float *b,int cout,int s)
+__global__ void add_bias_conv_kernel(float *Y,const float *b,int batch,int cout,int s)
 {
     int index=blockDim.x*blockIdx.x+threadIdx.x;
-    if(index<cout*s) Y[index]+=b[index/s];
+    int total=batch*cout*s;
+    if(index<total) Y[index]+=b[(index/s)%cout];
 }
 
 void add_bias_conv(Tensor& Yflat,const Tensor& b)
 {
-    int total=Yflat.total_elements();
+    int batch=Yflat.shape[0],cout=Yflat.shape[1],s=Yflat.shape[2];
+    int total=batch*cout*s;
     int threads=256;
     int blocks=(threads+total-1)/threads;
-    add_bias_conv_kernel<<<blocks,threads>>>(Yflat.get_data(),b.get_data(),Yflat.rows(),Yflat.cols());
+    add_bias_conv_kernel<<<blocks,threads>>>(Yflat.get_data(),b.get_data(),batch,cout,s);
 }
 
-__global__ void sum_spatial_kernel(const float *dYflat,float *db,int cout,int s)
+__global__ void sum_spatial_kernel(const float *dYflat,float *db,int batch,int cout,int s)
 {
-    int index=blockDim.x*blockIdx.x+threadIdx.x;
-    if(index<cout)
+    int c=blockDim.x*blockIdx.x+threadIdx.x;
+    if(c<cout)
     {
         float sum=0.0f;
-        for(int i=0;i<s;i++) sum+=dYflat[index*s+i];
-        db[index]=sum;
+        for(int n=0;n<batch;n++)
+        {
+            for(int i=0;i<s;i++) sum+=dYflat[n*(cout*s)+c*s+i];
+        }
+        db[c]=sum;
     }
 }
 
 Tensor sum_spatial(const Tensor& dYflat)
 {
-    int cout=dYflat.rows(),s=dYflat.cols();
+    int batch=dYflat.shape[0],cout=dYflat.shape[1],s=dYflat.shape[2];
     Tensor db({1,cout});
     int threads=256;
     int blocks=(cout+threads-1)/threads;
-    sum_spatial_kernel<<<blocks,threads>>>(dYflat.get_data(),db.get_data(),cout,s);
+    sum_spatial_kernel<<<blocks,threads>>>(dYflat.get_data(),db.get_data(),batch,cout,s);
     return db;
+}
+
+Tensor multiply_conv_forward(const Tensor& W,const Tensor& Xcol)
+{
+    int batch=Xcol.shape[0],fan_in=Xcol.shape[1],spatial=Xcol.shape[2],cout=W.shape[0];
+    Tensor Yflat({batch,cout,spatial});
+    cublasHandle_t handle=Context::get_instance().get_cublas_handle();
+    float alpha=1.0f,beta=0.0f;
+    for(int n=0;n<batch;n++) cublasSgemm(handle,CUBLAS_OP_N,CUBLAS_OP_N,spatial,cout,fan_in,&alpha,Xcol.get_data()+n*(fan_in*spatial),spatial,W.get_data(),fan_in,&beta,Yflat.get_data()+n*(cout*spatial),spatial);
+    return Yflat;
+}
+
+Tensor multiply_conv_backward_dX(const Tensor& W,const Tensor& dYflat)
+{
+    int batch=dYflat.shape[0],cout=dYflat.shape[1],spatial=dYflat.shape[2],fan_in=W.shape[1];
+    Tensor dXcol({batch,fan_in,spatial});
+    cublasHandle_t handle=Context::get_instance().get_cublas_handle();
+    float alpha=1.0f,beta=0.0f;
+    for(int n=0;n<batch;n++) cublasSgemm(handle,CUBLAS_OP_N,CUBLAS_OP_T,spatial,fan_in,cout,&alpha,dYflat.get_data()+n*(cout*spatial),spatial,W.get_data(),fan_in,&beta,dXcol.get_data()+n*(fan_in*spatial),spatial);
+    return dXcol;
+}
+
+void multiply_conv_backward_dW(Tensor& dW,const Tensor& dYflat,const Tensor& Xcol)
+{
+    int batch=dYflat.shape[0],cout=dYflat.shape[1],spatial=dYflat.shape[2],fan_in=Xcol.shape[1];
+    cublasHandle_t handle=Context::get_instance().get_cublas_handle();
+    float alpha=1.0f,beta=1.0f;
+    cudaMemset(dW.get_data(),0,cout*fan_in*sizeof(float));
+    for(int n=0;n<batch;n++) cublasSgemm(handle,CUBLAS_OP_T,CUBLAS_OP_N,fan_in,cout,spatial,&alpha,Xcol.get_data()+n*(fan_in*spatial),spatial,dYflat.get_data()+n*(cout*spatial),spatial,&beta,dW.get_data(),fan_in);
 }
