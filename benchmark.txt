@@ -1,3 +1,4 @@
 MNIST
 
 First Run - Training 98.76% and Testing 98.55%
+Second Run (with BN) - Training 99.5% and Testing 98.3% (Decreased cause bn probably overfit here cuz dataset is too simple)
