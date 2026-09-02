@@ -66,7 +66,7 @@ void Dataset::load_emnist(const std::string& path,const std::string& labelp,Tens
 
     std::cout<<"Loading "<<num<<" EMNIST images..."<<std::endl;
 
-    std::vector<float> hX(num*r*c),hY(num*10,0.0f);
+    std::vector<float> hX(num*r*c),hY(num*nc,0.0f);
     std::vector<uint8_t> raw_img(num*r*c),raw_label(num);
 
     img.read((char*)raw_img.data(),raw_img.size());label.read((char*)raw_label.data(),raw_label.size());

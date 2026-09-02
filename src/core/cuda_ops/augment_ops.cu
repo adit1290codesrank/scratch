@@ -12,7 +12,7 @@ __global__ void augment_kernel(const float* X,float* Y,const AugmentParams* p,in
         if(p[n].flip)w_=w-1-wout;
         w_-=p[n].dx;
 
-        if(w_>=0 && w_<w && h_>=0 && h_<h) Y[index]=X[n*c*h*w+c*h*w+h_*w+w_];
+        if(w_>=0 && w_<w && h_>=0 && h_<h) Y[index]=X[n*c*h*w+cout*h*w+h_*w+w_];
         else Y[index]=0.0f;
     }
 }

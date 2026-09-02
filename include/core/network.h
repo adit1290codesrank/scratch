@@ -24,7 +24,7 @@ class Network
         Tensor forward(Tensor X);
         void backward(Tensor dY);
 
-        float train_step(const Tensor& X,const Tensor& Y);
+        std::pair<float,float> train_step(const Tensor& X,const Tensor& Y);
 
         void save_weights(const std::string& filepath);
         void load_weights(const std::string& filepath);

@@ -1,91 +1,94 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <ctime>
+#include <cstdlib>
 #include "include/core/network.h"
 #include "include/layer/conv2d.h"
 #include "include/layer/maxpool.h"
-#include "include/layer/flatten.h"
+#include "include/layer/gap.h"
 #include "include/layer/linear.h"
 #include "include/layer/activation.h"
-#include "include/core/dataset.h"
 #include "include/layer/batchnorm.h"
+#include "include/layer/res.h"
+#include "include/layer/augment.h"
+#include "include/core/dataset.h"
 #include "include/core/memory.h"
 
 int main()
 {
+    srand(time(NULL));
+
     Network net;
-    net.add_layer(new Conv2D(1,8,3,1,1));
-    net.add_layer(new BatchNorm(8));
+    net.add_layer(new Augment(false,2));
+
+    net.add_layer(new Conv2D(1,32,3,1,1));
+    net.add_layer(new BatchNorm(32));
+    net.add_layer(new ReLU());
+
+    Res* res1=new Res();
+    res1->add_main(new Conv2D(32,32,3,1,1));
+    res1->add_main(new BatchNorm(32));
+    res1->add_main(new ReLU());
+    res1->add_main(new Conv2D(32,32,3,1,1));
+    res1->add_main(new BatchNorm(32));
+    net.add_layer(res1);
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
-    net.add_layer(new Conv2D(8,16,3,1,1));
-    net.add_layer(new BatchNorm(16));
+
+    net.add_layer(new Conv2D(32,64,3,1,1));
+    net.add_layer(new BatchNorm(64));
+    net.add_layer(new ReLU());
+
+    Res* res2=new Res();
+    res2->add_main(new Conv2D(64,64,3,1,1));
+    res2->add_main(new BatchNorm(64));
+    res2->add_main(new ReLU());
+    res2->add_main(new Conv2D(64,64,3,1,1));
+    res2->add_main(new BatchNorm(64));
+    net.add_layer(res2);
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2,2));
-    net.add_layer(new Flatten());
-    net.add_layer(new Linear(784,10));
+
+    net.add_layer(new Conv2D(64,128,3,1,1));
+    net.add_layer(new BatchNorm(128));
+    net.add_layer(new ReLU());
+
+    net.add_layer(new GAP());
+    net.add_layer(new Linear(128,62));
     net.add_layer(new Softmax());
 
-    net.load_weights("weights/mnist_model_1.bin");
 
-    Tensor X_test, Y_test;
-    Dataset::load_mnist("data/t10k-images.idx3-ubyte","data/t10k-labels.idx1-ubyte",X_test,Y_test);
+    Adam* optimizer=new Adam(net.get_layers(),0.005f);
+    net.compile(optimizer,new CrossEntropyLoss());
 
-    int total=X_test.shape[0];
-    int batch_size=128;
-    int cor=0;
+    Tensor X_train,Y_train;
+    Dataset::load_emnist("data/emnist-byclass-train-images-idx3-ubyte","data/emnist-byclass-train-labels-idx1-ubyte",X_train,Y_train,62);
 
-    ((BatchNorm*)net.get_layers()[1])->eval();
-    ((BatchNorm*)net.get_layers()[5])->eval();
+    int batch_size=256,epochs=10,total=X_train.shape[0];
+    std::cout << "Starting EMNIST ByClass ResNet Training on " << total << " images..." << std::endl;
 
-    for(int start=0;start<total;start +=batch_size)
+    for(int i=0;i<=epochs;i++)
     {
-        int end=start+batch_size>total?total:start+batch_size;
-        int current_batch=end-start;
-        
-        Tensor X_batch=X_test.slice(start,end);
-        Tensor Y_batch=Y_test.slice(start,end);
+        if (i==5) optimizer->set_lr(0.001f);
+        if (i==8) optimizer->set_lr(0.0001f);
 
-        Tensor pred=net.forward(X_batch);
-
-        std::vector<float> h_pred(current_batch*10);
-        std::vector<float> h_Y(current_batch*10);
-        
-        pred.copy_to_host(h_pred.data());
-        Y_batch.copy_to_host(h_Y.data());
-
-        for(int i = 0; i < current_batch; i++) 
+        float loss=0.0f,acc=0.0f;
+        int b=0;
+        for(int j=0;j<total;j+=batch_size)
         {
-            int best_pred=0;
-            float max_prob=-1.0f;
+            int end=std::min(j+batch_size,total);
+            if(end-j!=batch_size) continue;
+
+            Tensor X_batch=X_train.slice(j,end),Y_batch=Y_train.slice(j,end);
+
+            auto train_return=net.train_step(X_batch,Y_batch);
+            loss+=train_return.first;acc+=train_return.second;
+            b++;
             
-            int true_label=0;
-            float max_true=-1.0f;
-
-            for(int j=0;j<10;j++) 
-            {
-                if(h_pred[i*10+j]>max_prob) 
-                {
-                    max_prob=h_pred[i*10+j];
-                    best_pred=j;
-                }
-                if(h_Y[i*10+j]>max_true) 
-                {
-                    max_true=h_Y[i*10+j];
-                    true_label=j;
-                }
-            }
-
-            if(best_pred==true_label) cor++;
+            if(b%500==0) std::cout << "  Batch " << b << "/" << (total/batch_size) << " | Loss: " << std::fixed << std::setprecision(4) << (loss/b) << " | Acc: " << (acc/b)*100.0f << "%\r" << std::flush;
         }
+        std::cout << "\nEpoch " << i << " Complete"<< " | Avg Loss: " << std::fixed << std::setprecision(4) << (loss/b)<< " | Avg Acc: " << (acc/b)*100.0f << "%" << std::endl;
+        net.save_weights("weights/emnist_byclass_"+std::to_string(i)+".bin");
     }
-
-    float accuracy=((float)cor/total)*100.0f;
-    std::cout << "\n======================================" << std::endl;
-    std::cout << "Test Accuracy: " << cor << " / " << total << std::endl;
-    std::cout << "Final Score:   " << std::fixed << std::setprecision(2) << accuracy << "%" << std::endl;
-    std::cout << "======================================" << std::endl;
-    
-    clear_memory_pool();
-    return 0;
 }
