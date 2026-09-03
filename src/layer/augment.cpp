@@ -2,7 +2,7 @@
 #include <vector>
 #include <cstdlib>
 
-Augment::Augment(bool flip,int max):is_training(true),flip(flip),max(max),pgpu(nullptr),b_(0){}
+Augment::Augment(bool flip,int max,int hole):is_training(true),flip(flip),max(max),hole(hole),pgpu(nullptr),b_(0){}
 
 Augment::~Augment(){free_augment(pgpu);}
 
@@ -25,6 +25,9 @@ Tensor Augment::forward(const Tensor& X)
         p[i].flip=flip?(rand()%2):0;
         p[i].dx=(rand()%(2*max+1))-max;
         p[i].dy=(rand()%(2*max+1))-max;
+        p[i].hole=hole;
+        p[i].cx=rand()%w;
+        p[i].cy=rand()%h;
     }
 
     Tensor Y=Tensor::zeros(X.shape);

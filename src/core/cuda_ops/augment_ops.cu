@@ -12,7 +12,14 @@ __global__ void augment_kernel(const float* X,float* Y,const AugmentParams* p,in
         if(p[n].flip)w_=w-1-wout;
         w_-=p[n].dx;
 
-        if(w_>=0 && w_<w && h_>=0 && h_<h) Y[index]=X[n*c*h*w+cout*h*w+h_*w+w_];
+        bool cutout=false;
+        if(p[n].hole>0)
+        {
+            int h2=p[n].hole/2;
+            if(wout>=p[n].cx-h2 && wout<p[n].cx+h2 && hout>=p[n].cy-h2 && hout<p[n].cy+h2) cutout=true;
+        }
+
+        if(!cutout && w_>=0 && w_<w && h_>=0 && h_<h) Y[index]=X[n*c*h*w+cout*h*w+h_*w+w_];
         else Y[index]=0.0f;
     }
 }

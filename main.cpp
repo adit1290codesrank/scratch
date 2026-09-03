@@ -16,6 +16,7 @@
 #include "include/core/dataset.h"
 #include "include/core/memory.h"
 #include "include/core/scheduler.h"
+#include "include/layer/dropout.h"
 
 int main()
 {
@@ -23,7 +24,7 @@ int main()
 
     Network net;
 
-    net.add_layer(new Augment(true,4));
+    net.add_layer(new Augment(true,4,8));
 
     net.add_layer(new Conv2D(3,32,3,1,1));
     net.add_layer(new BatchNorm(32));
@@ -81,12 +82,16 @@ int main()
     net.add_layer(new ReLU());
 
     net.add_layer(new GAP());
-    net.add_layer(new Linear(256,10));
+    net.add_layer(new Linear(256,128));
+    net.add_layer(new BatchNorm(128));
+    net.add_layer(new ReLU());
+    net.add_layer(new Dropout(0.3f));
+    net.add_layer(new Linear(128,10));
     net.add_layer(new Softmax());
 
     int epochs=50;
 
-    Adam* optimizer=new Adam(net.get_layers(),0.005f,0.9f,0.999f,1e-8,1e-3);
+    Adam* optimizer=new Adam(net.get_layers(),0.005f);
     CosineAnnealing* scheduler=new CosineAnnealing(optimizer,0.005f,0.0001f,epochs);
     net.compile(optimizer,new CrossEntropyLoss());
 
