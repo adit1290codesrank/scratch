@@ -86,7 +86,7 @@ int main()
 
     int epochs=50;
 
-    Adam* optimizer=new Adam(net.get_layers(),0.005f);
+    Adam* optimizer=new Adam(net.get_layers(),0.005f,0.9f,0.999f,1e-8,1e-3);
     CosineAnnealing* scheduler=new CosineAnnealing(optimizer,0.005f,0.0001f,epochs);
     net.compile(optimizer,new CrossEntropyLoss());
 
