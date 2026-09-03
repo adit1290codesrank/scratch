@@ -20,7 +20,7 @@ class Optimizer
 class Adam:public Optimizer
 {
     private:
-        float b1,b2,e;
+        float b1,b2,e,wd;
         int t;
 
         std::unordered_map<Tensor*,Tensor> m_map;
@@ -28,7 +28,7 @@ class Adam:public Optimizer
 
     public:
 
-        Adam(std::vector<Layer*> layers,float lr=0.001f,float beta1=0.9f,float beta2=0.999f,float eps=1e-8f);
+        Adam(std::vector<Layer*> layers,float lr=0.001f,float beta1=0.9f,float beta2=0.999f,float eps=1e-8f,float wd=1e-4f);
         void step() override;
 
         void set_lr(float new_lr){this->lr=new_lr;}
