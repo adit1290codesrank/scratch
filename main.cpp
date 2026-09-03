@@ -1,6 +1,9 @@
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <string>
+#include <ctime>
+#include <cstdlib>
 #include "include/core/network.h"
 #include "include/layer/conv2d.h"
 #include "include/layer/maxpool.h"
@@ -12,130 +15,109 @@
 #include "include/layer/augment.h"
 #include "include/core/dataset.h"
 #include "include/core/memory.h"
-
-// Helper function to calculate accuracy
-float calc_accuracy(const std::vector<float>& hpred, const std::vector<float>& hy, int batch_size, int classes) {
-    int correct = 0;
-    for (int i = 0; i < batch_size; i++) {
-        int best_p = 0, best_y = 0;
-        float max_p = -1e9, max_y = -1e9;
-        for (int j = 0; j < classes; j++) {
-            if (hpred[i * classes + j] > max_p) { max_p = hpred[i * classes + j]; best_p = j; }
-            if (hy[i * classes + j] > max_y) { max_y = hy[i * classes + j]; best_y = j; }
-        }
-        if (best_p == best_y) correct++;
-    }
-    return (float)correct / batch_size;
-}
+#include "include/core/scheduler.h"
 
 int main()
 {
+    srand(time(NULL));
+
     Network net;
 
-    // 1. Turn OFF Augmentation for Testing!
-    net.add_layer(new Augment(false, 0));
+    net.add_layer(new Augment(true,4));
 
-    // 2. Exact same architecture to match the weights
-    net.add_layer(new Conv2D(3, 32, 3, 1, 1));
+    net.add_layer(new Conv2D(3,32,3,1,1));
     net.add_layer(new BatchNorm(32));
     net.add_layer(new ReLU());
 
-    Res* res1 = new Res();
-    res1->add_main(new Conv2D(32, 32, 3, 1, 1));
+    Res* res1=new Res();
+    res1->add_main(new Conv2D(32,32,3,1,1));
     res1->add_main(new BatchNorm(32));
     res1->add_main(new ReLU());
-    res1->add_main(new Conv2D(32, 32, 3, 1, 1));
+    res1->add_main(new Conv2D(32,32,3,1,1));
     res1->add_main(new BatchNorm(32));
     net.add_layer(res1);
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2, 2));
 
-    net.add_layer(new Conv2D(32, 64, 3, 1, 1));
+    net.add_layer(new Conv2D(32,64,3,1,1));
     net.add_layer(new BatchNorm(64));
     net.add_layer(new ReLU());
 
-    Res* res2 = new Res();
-    res2->add_main(new Conv2D(64, 64, 3, 1, 1));
+    Res* res2=new Res();
+    res2->add_main(new Conv2D(64,64,3,1,1));
     res2->add_main(new BatchNorm(64));
     res2->add_main(new ReLU());
-    res2->add_main(new Conv2D(64, 64, 3, 1, 1));
+    res2->add_main(new Conv2D(64,64,3,1,1));
     res2->add_main(new BatchNorm(64));
     net.add_layer(res2);
     net.add_layer(new ReLU());
-    net.add_layer(new MaxPool(2, 2));
+    net.add_layer(new MaxPool(2,2));
 
-    net.add_layer(new Conv2D(64, 128, 3, 1, 1));
+    net.add_layer(new Conv2D(64,128,3,1,1));
     net.add_layer(new BatchNorm(128));
     net.add_layer(new ReLU());
 
-    Res* res3 = new Res();
-    res3->add_main(new Conv2D(128, 128, 3, 1, 1));
+    Res* res3=new Res();
+    res3->add_main(new Conv2D(128,128,3,1,1));
     res3->add_main(new BatchNorm(128));
     res3->add_main(new ReLU());
-    res3->add_main(new Conv2D(128, 128, 3, 1, 1));
+    res3->add_main(new Conv2D(128,128,3,1,1));
     res3->add_main(new BatchNorm(128));
     net.add_layer(res3);
     net.add_layer(new ReLU());
     net.add_layer(new MaxPool(2, 2));
 
-    net.add_layer(new Conv2D(128, 256, 3, 1, 1));
+    net.add_layer(new Conv2D(128,256,3,1,1));
     net.add_layer(new BatchNorm(256));
     net.add_layer(new ReLU());
 
-    Res* res4 = new Res();
-    res4->add_main(new Conv2D(256, 256, 3, 1, 1));
+    Res* res4=new Res();
+    res4->add_main(new Conv2D(256,256,3,1,1));
     res4->add_main(new BatchNorm(256));
     res4->add_main(new ReLU());
-    res4->add_main(new Conv2D(256, 256, 3, 1, 1));
+    res4->add_main(new Conv2D(256,256,3,1,1));
     res4->add_main(new BatchNorm(256));
     net.add_layer(res4);
     net.add_layer(new ReLU());
 
     net.add_layer(new GAP());
-    net.add_layer(new Linear(256, 10));
+    net.add_layer(new Linear(256,10));
     net.add_layer(new Softmax());
 
-    // 3. LOAD THE WEIGHTS (Change this to whatever epoch you downloaded!)
-    std::string weight_file = "weights/cifar10_byclass_30.bin";
-    std::cout << "Loading weights from: " << weight_file << std::endl;
-    net.load_weights(weight_file);
+    int epochs=50;
 
-    // 4. LOAD THE TEST DATASET (Notice the 'true' flag at the end!)
-    Tensor X_test, Y_test;
-    Dataset::load_cifar10("data/cifar-10-batches-bin", X_test, Y_test, true);
+    Adam* optimizer=new Adam(net.get_layers(),0.005f);
+    CosineAnnealing* scheduler=new CosineAnnealing(optimizer,0.005f,0.0001f,epochs);
+    net.compile(optimizer,new CrossEntropyLoss());
 
-    int total_images = X_test.shape[0];
-    int batch_size = 256;
-    float epoch_acc = 0.0f;
-    int batches = 0;
+    Tensor X_train,Y_train;
+    Dataset::load_cifar10("data/cifar-10-batches-bin",X_train,Y_train,false);
 
-    std::cout << "Starting Evaluation on " << total_images << " Test Images..." << std::endl;
+    int total=X_train.shape[0],batch_size=256;
 
-    for (int start = 0; start < total_images; start += batch_size)
+    std::cout << "Starting CIFAR-10 ResNet Training on " << total << " images..." << std::endl;
+
+    for(int i=1;i<=epochs;i++)
     {
-        int end = std::min(start + batch_size, total_images);
-        if(end - start != batch_size) continue; 
-        
-        Tensor X_batch = X_test.slice(start, end);
-        Tensor Y_batch = Y_test.slice(start, end);
+        scheduler->step();
+        float loss=0.0f,acc=0.0f;
+        int b=0;
 
-        // Forward Pass ONLY! No backprop.
-        Tensor pred = net.forward(X_batch);
-        
-        // Calculate Accuracy
-        std::vector<float> hpred(batch_size * 10), hy(batch_size * 10);
-        pred.copy_to_host(hpred.data());
-        Y_batch.copy_to_host(hy.data());
-        
-        float acc = calc_accuracy(hpred, hy, batch_size, 10);
-        epoch_acc += acc;
-        batches++;
+        for(int j=0;j<total;j+=batch_size)
+        {
+            int end=std::min(j+batch_size,total);
+            if(end-j!=batch_size)continue;
 
-        std::cout << "  Testing Batch " << batches << " | Acc: " << acc * 100.0f << "%\r" << std::flush;
+            Tensor X_batch=X_train.slice(j,end),Y_batch=Y_train.slice(j,end);
+            
+            auto train_return=net.train_step(X_batch,Y_batch);
+            loss+=train_return.first;acc+=train_return.second;
+            b++;
+            if(b%500==0) std::cout << "  Batch " << b << "/" << (total/batch_size) << " | Loss: " << std::fixed << std::setprecision(4) << (loss/b) << " | Acc: " << (acc/b)*100.0f << "%\r" << std::flush;
+        }
+        std::cout << "\nEpoch " << i << " Complete"<< " | Avg Loss: " << std::fixed << std::setprecision(4) << (loss/b)<< " | Avg Acc: " << (acc/b)*100.0f << "%" << std::endl;
+        net.save_weights("weights/cifar10_byclass_"+std::to_string(i)+".bin");
     }
-
-    std::cout << "\n\nFINAL TEST ACCURACY: " << (epoch_acc / batches) * 100.0f << "%!" << std::endl;
-
     clear_memory_pool();
     return 0;
 }
