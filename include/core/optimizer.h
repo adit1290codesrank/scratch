@@ -14,6 +14,7 @@ class Optimizer
         virtual ~Optimizer()=default;
 
         virtual void step() = 0;
+        virtual void set_lr(float new_lr)=0;
 };
 
 class Adam:public Optimizer
