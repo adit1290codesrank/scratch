@@ -26,85 +26,85 @@ int main()
 
     net.add_layer(new Augment(true,4));
 
-    net.add_layer(new Conv2D(3,32,3,1,1));
-    net.add_layer(new BatchNorm(32));
+    net.add_layer(new Conv2D(3,64,3,1,1));
+    net.add_layer(new BatchNorm(64));
     net.add_layer(new ReLU());
 
     Res* res1=new Res();
-    res1->add_main(new Conv2D(32,32,3,1,1));
-    res1->add_main(new BatchNorm(32));
+    res1->add_main(new Conv2D(64,64,3,1,1));
+    res1->add_main(new BatchNorm(64));
     res1->add_main(new ReLU());
-    res1->add_main(new Conv2D(32,32,3,1,1));
-    res1->add_main(new BatchNorm(32));
+    res1->add_main(new Conv2D(64,64,3,1,1));
+    res1->add_main(new BatchNorm(64));
     net.add_layer(res1);
     net.add_layer(new ReLU());
 
     Res* pres2=new Res();
-    pres2->add_main(new Conv2D(32,64,3,2,1));
-    pres2->add_main(new BatchNorm(64));
+    pres2->add_main(new Conv2D(64,128,3,2,1));
+    pres2->add_main(new BatchNorm(128));
     pres2->add_main(new ReLU());
-    pres2->add_main(new Conv2D(64,64,3,1,1));
-    pres2->add_main(new BatchNorm(64));
-    pres2->add_skip(new Conv2D(32,64,1,2,0));
-    pres2->add_skip(new BatchNorm(64));
+    pres2->add_main(new Conv2D(128,128,3,1,1));
+    pres2->add_main(new BatchNorm(128));
+    pres2->add_skip(new Conv2D(64,128,1,2,0));
+    pres2->add_skip(new BatchNorm(128));
     net.add_layer(pres2);
     net.add_layer(new ReLU());
 
     Res* res2=new Res();
-    res2->add_main(new Conv2D(64,64,3,1,1));
-    res2->add_main(new BatchNorm(64));
+    res2->add_main(new Conv2D(128,128,3,1,1));
+    res2->add_main(new BatchNorm(128));
     res2->add_main(new ReLU());
-    res2->add_main(new Conv2D(64,64,3,1,1));
-    res2->add_main(new BatchNorm(64));
+    res2->add_main(new Conv2D(128,128,3,1,1));
+    res2->add_main(new BatchNorm(128));
     net.add_layer(res2);
     net.add_layer(new ReLU());
 
     Res* pres3=new Res();
-    pres3->add_main(new Conv2D(64,128,3,2,1));
-    pres3->add_main(new BatchNorm(128));
+    pres3->add_main(new Conv2D(128,256,3,2,1));
+    pres3->add_main(new BatchNorm(256));
     pres3->add_main(new ReLU());
-    pres3->add_main(new Conv2D(128,128,3,1,1));
-    pres3->add_main(new BatchNorm(128));
-    pres3->add_skip(new Conv2D(64,128,1,2,0));
-    pres3->add_skip(new BatchNorm(128));
+    pres3->add_main(new Conv2D(256,256,3,1,1));
+    pres3->add_main(new BatchNorm(256));
+    pres3->add_skip(new Conv2D(128,256,1,2,0));
+    pres3->add_skip(new BatchNorm(256));
     net.add_layer(pres3);
     net.add_layer(new ReLU());
 
     Res* res3=new Res();
-    res3->add_main(new Conv2D(128,128,3,1,1));
-    res3->add_main(new BatchNorm(128));
+    res3->add_main(new Conv2D(256,256,3,1,1));
+    res3->add_main(new BatchNorm(256));
     res3->add_main(new ReLU());
-    res3->add_main(new Conv2D(128,128,3,1,1));
-    res3->add_main(new BatchNorm(128));
+    res3->add_main(new Conv2D(256,256,3,1,1));
+    res3->add_main(new BatchNorm(256));
     net.add_layer(res3);
     net.add_layer(new ReLU());
 
     Res* pres4=new Res();
-    pres4->add_main(new Conv2D(128,256,3,2,1));
-    pres4->add_main(new BatchNorm(256));
+    pres4->add_main(new Conv2D(256,512,3,2,1));
+    pres4->add_main(new BatchNorm(512));
     pres4->add_main(new ReLU());
-    pres4->add_main(new Conv2D(256,256,3,1,1));
-    pres4->add_main(new BatchNorm(256));
-    pres4->add_skip(new Conv2D(128,256,1,2,0));
-    pres4->add_skip(new BatchNorm(256));
+    pres4->add_main(new Conv2D(512,512,3,1,1));
+    pres4->add_main(new BatchNorm(512));
+    pres4->add_skip(new Conv2D(256,512,1,2,0));
+    pres4->add_skip(new BatchNorm(512));
     net.add_layer(pres4);
     net.add_layer(new ReLU());
 
     Res* res4=new Res();
-    res4->add_main(new Conv2D(256,256,3,1,1));
-    res4->add_main(new BatchNorm(256));
+    res4->add_main(new Conv2D(512,512,3,1,1));
+    res4->add_main(new BatchNorm(512));
     res4->add_main(new ReLU());
-    res4->add_main(new Conv2D(256,256,3,1,1));
-    res4->add_main(new BatchNorm(256));
+    res4->add_main(new Conv2D(512,512,3,1,1));
+    res4->add_main(new BatchNorm(512));
     net.add_layer(res4);
     net.add_layer(new ReLU());
 
     net.add_layer(new GAP());
     net.add_layer(new Dropout(0.3f));
-    net.add_layer(new Linear(256,10));
+    net.add_layer(new Linear(512,10));
     net.add_layer(new Softmax());
 
-    int epochs=50;
+    int epochs=80;
 
     Adam* optimizer=new Adam(net.get_layers(),0.005f,0.9f,0.999f,1e-8f,1e-3f);
     CosineAnnealing* scheduler=new CosineAnnealing(optimizer,0.005f,0.0001f,epochs);
