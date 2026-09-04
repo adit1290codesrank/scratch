@@ -22,3 +22,16 @@ class CrossEntropyLoss:public Loss
         float calculate_loss(const Tensor& pred,const Tensor& target) override;
         Tensor backward_loss(const Tensor& pred,const Tensor& target) override;
 };
+
+class LSCrossEntropyLoss:public Loss
+{
+    private:
+        int n;
+        float a;
+
+    public:
+        LSCrossEntropyLoss(int n,float a=0.1);
+
+        float calculate_loss(const Tensor& pred,const Tensor& target) override;
+        Tensor backward_loss(const Tensor& pred,const Tensor& target) override;
+};
