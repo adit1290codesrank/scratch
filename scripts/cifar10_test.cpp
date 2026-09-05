@@ -33,10 +33,8 @@ int main()
 {
     Network net;
 
-    // 1. Turn OFF Augmentation for Testing!
     net.add_layer(new Augment(false, 0));
 
-    // 2. Exact same architecture to match the weights
     net.add_layer(new Conv2D(3,32,3,1,1));
     net.add_layer(new BatchNorm(32));
     net.add_layer(new ReLU());
@@ -115,12 +113,10 @@ int main()
     net.add_layer(new Linear(256,10));
     net.add_layer(new Softmax());
 
-    // 3. LOAD THE WEIGHTS (Change this to whatever epoch you downloaded!)
     std::string weight_file = "weights/cifar10_50.bin";
     std::cout << "Loading weights from: " << weight_file << std::endl;
     net.load_weights(weight_file);
 
-    // 4. LOAD THE TEST DATASET (Notice the 'true' flag at the end!)
     Tensor X_test, Y_test;
     Dataset::load_cifar10("data/cifar-10-batches-bin", X_test, Y_test, true);
 
@@ -130,7 +126,7 @@ int main()
     int batches = 0;
 
     std::cout << "Starting Evaluation on " << total_images << " Test Images..." << std::endl;
-    net.eval(); // CRITICAL: Turns off Dropout and switches BatchNorm to inference mode!
+    net.eval(); 
 
     for (int start = 0; start < total_images; start += batch_size)
     {
@@ -140,10 +136,8 @@ int main()
         Tensor X_batch = X_test.slice(start, end);
         Tensor Y_batch = Y_test.slice(start, end);
 
-        // Forward Pass ONLY! No backprop.
         Tensor pred = net.forward(X_batch);
         
-        // Calculate Accuracy
         std::vector<float> hpred(batch_size * 10), hy(batch_size * 10);
         pred.copy_to_host(hpred.data());
         Y_batch.copy_to_host(hy.data());
