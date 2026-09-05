@@ -6,3 +6,9 @@ Second Run (with BN) - Training 99.5% and Testing 98.3% (Decreased cause bn prob
 EMNIST ByClass
 
 First Run - Training 88.77% and Testing 88.31%
+
+CIFAR-10
+
+First Run (Vibecoded Deep Learning Repo) - Testing 84.14% (2.8M parameters)
+Final Run (Scratch Engine) - Training 98.17% and Testing 92.50%
+Architecture: Full ResNet-18 (11M parameters) with ProjResBlock, AdamW, Cutout, Dropout (0.3), and Label Smoothing (a=0.1).

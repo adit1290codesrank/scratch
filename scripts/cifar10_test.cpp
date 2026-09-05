@@ -12,6 +12,7 @@
 #include "include/layer/augment.h"
 #include "include/core/dataset.h"
 #include "include/core/memory.h"
+#include "include/layer/dropout.h"
 
 // Helper function to calculate accuracy
 float calc_accuracy(const std::vector<float>& hpred, const std::vector<float>& hy, int batch_size, int classes) {
@@ -36,67 +37,86 @@ int main()
     net.add_layer(new Augment(false, 0));
 
     // 2. Exact same architecture to match the weights
-    net.add_layer(new Conv2D(3, 32, 3, 1, 1));
+    net.add_layer(new Conv2D(3,32,3,1,1));
     net.add_layer(new BatchNorm(32));
     net.add_layer(new ReLU());
 
-    Res* res1 = new Res();
-    res1->add_main(new Conv2D(32, 32, 3, 1, 1));
+    Res* res1=new Res();
+    res1->add_main(new Conv2D(32,32,3,1,1));
     res1->add_main(new BatchNorm(32));
     res1->add_main(new ReLU());
-    res1->add_main(new Conv2D(32, 32, 3, 1, 1));
+    res1->add_main(new Conv2D(32,32,3,1,1));
     res1->add_main(new BatchNorm(32));
     net.add_layer(res1);
     net.add_layer(new ReLU());
-    net.add_layer(new MaxPool(2, 2));
 
-    net.add_layer(new Conv2D(32, 64, 3, 1, 1));
-    net.add_layer(new BatchNorm(64));
+    Res* pres2=new Res();
+    pres2->add_main(new Conv2D(32,64,3,2,1));
+    pres2->add_main(new BatchNorm(64));
+    pres2->add_main(new ReLU());
+    pres2->add_main(new Conv2D(64,64,3,1,1));
+    pres2->add_main(new BatchNorm(64));
+    pres2->add_skip(new Conv2D(32,64,1,2,0));
+    pres2->add_skip(new BatchNorm(64));
+    net.add_layer(pres2);
     net.add_layer(new ReLU());
 
-    Res* res2 = new Res();
-    res2->add_main(new Conv2D(64, 64, 3, 1, 1));
+    Res* res2=new Res();
+    res2->add_main(new Conv2D(64,64,3,1,1));
     res2->add_main(new BatchNorm(64));
     res2->add_main(new ReLU());
-    res2->add_main(new Conv2D(64, 64, 3, 1, 1));
+    res2->add_main(new Conv2D(64,64,3,1,1));
     res2->add_main(new BatchNorm(64));
     net.add_layer(res2);
     net.add_layer(new ReLU());
-    net.add_layer(new MaxPool(2, 2));
 
-    net.add_layer(new Conv2D(64, 128, 3, 1, 1));
-    net.add_layer(new BatchNorm(128));
+    Res* pres3=new Res();
+    pres3->add_main(new Conv2D(64,128,3,2,1));
+    pres3->add_main(new BatchNorm(128));
+    pres3->add_main(new ReLU());
+    pres3->add_main(new Conv2D(128,128,3,1,1));
+    pres3->add_main(new BatchNorm(128));
+    pres3->add_skip(new Conv2D(64,128,1,2,0));
+    pres3->add_skip(new BatchNorm(128));
+    net.add_layer(pres3);
     net.add_layer(new ReLU());
 
-    Res* res3 = new Res();
-    res3->add_main(new Conv2D(128, 128, 3, 1, 1));
+    Res* res3=new Res();
+    res3->add_main(new Conv2D(128,128,3,1,1));
     res3->add_main(new BatchNorm(128));
     res3->add_main(new ReLU());
-    res3->add_main(new Conv2D(128, 128, 3, 1, 1));
+    res3->add_main(new Conv2D(128,128,3,1,1));
     res3->add_main(new BatchNorm(128));
     net.add_layer(res3);
     net.add_layer(new ReLU());
-    net.add_layer(new MaxPool(2, 2));
 
-    net.add_layer(new Conv2D(128, 256, 3, 1, 1));
-    net.add_layer(new BatchNorm(256));
+    Res* pres4=new Res();
+    pres4->add_main(new Conv2D(128,256,3,2,1));
+    pres4->add_main(new BatchNorm(256));
+    pres4->add_main(new ReLU());
+    pres4->add_main(new Conv2D(256,256,3,1,1));
+    pres4->add_main(new BatchNorm(256));
+    pres4->add_skip(new Conv2D(128,256,1,2,0));
+    pres4->add_skip(new BatchNorm(256));
+    net.add_layer(pres4);
     net.add_layer(new ReLU());
 
-    Res* res4 = new Res();
-    res4->add_main(new Conv2D(256, 256, 3, 1, 1));
+    Res* res4=new Res();
+    res4->add_main(new Conv2D(256,256,3,1,1));
     res4->add_main(new BatchNorm(256));
     res4->add_main(new ReLU());
-    res4->add_main(new Conv2D(256, 256, 3, 1, 1));
+    res4->add_main(new Conv2D(256,256,3,1,1));
     res4->add_main(new BatchNorm(256));
     net.add_layer(res4);
     net.add_layer(new ReLU());
 
     net.add_layer(new GAP());
-    net.add_layer(new Linear(256, 10));
+    net.add_layer(new Dropout(0.3f));
+    net.add_layer(new Linear(256,10));
     net.add_layer(new Softmax());
 
     // 3. LOAD THE WEIGHTS (Change this to whatever epoch you downloaded!)
-    std::string weight_file = "weights/cifar10_byclass_30.bin";
+    std::string weight_file = "weights/cifar10_50.bin";
     std::cout << "Loading weights from: " << weight_file << std::endl;
     net.load_weights(weight_file);
 
@@ -110,6 +130,7 @@ int main()
     int batches = 0;
 
     std::cout << "Starting Evaluation on " << total_images << " Test Images..." << std::endl;
+    net.eval(); // CRITICAL: Turns off Dropout and switches BatchNorm to inference mode!
 
     for (int start = 0; start < total_images; start += batch_size)
     {

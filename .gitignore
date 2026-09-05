@@ -22,3 +22,5 @@ tmpxft_*
 
 weights/
 data/
+build/
+output/
