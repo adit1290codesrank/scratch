@@ -42,3 +42,15 @@ Tensor LSCrossEntropyLoss::backward_loss(const Tensor& pred,const Tensor& target
     ls_ce_backward(pred, target,dY,this->n,this->a);
     return dY;
 }
+
+float SparseCrossEntropyLoss::calculate_loss(const Tensor& pred,const Tensor& target)
+{
+    return sparse_ce_forward(pred,target);
+}
+
+Tensor SparseCrossEntropyLoss::backward_loss(const Tensor& pred,const Tensor& target)
+{
+    Tensor dY(pred.shape);
+    sparse_ce_backward(pred,target,dY);
+    return dY;
+}

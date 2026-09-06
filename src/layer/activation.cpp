@@ -1,7 +1,7 @@
 #include "../../include/layer/activation.h"
 #include "../../include/core/activation_ops.h" 
 
-Tensor ReLU::forward(const Tensor& X)
+Tensor ReLU::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
     Tensor Y=X.clone();
@@ -16,7 +16,7 @@ Tensor ReLU::backward(const Tensor& dY)
     return dX;
 }
 
-Tensor Softmax::forward(const Tensor& X)
+Tensor Softmax::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
     Tensor Y=X.clone();

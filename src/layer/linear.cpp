@@ -13,20 +13,36 @@ Linear::Linear(int in,int out,Init init,float custom_std):W({in,out}),b({1,out})
     db=Tensor::zeros({1,out});  
 }
 
-Tensor Linear::forward(const Tensor& X,const Tensor* mask)
+Tensor Linear::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
-    Tensor Y=X*W;
-    add_bias(Y,b);
-    return Y;
+    int d_in=X.shape.back();
+    int batch_seq=X.total_elements()/d_in;
+    
+    Tensor X2d=X.reshape({batch_seq,d_in});
+    Tensor Y2d=X2d*W;
+    add_bias(Y2d,b);
+    
+    std::vector<int> out_shape=X.shape;
+    out_shape.back()=W.shape.back();
+    
+    return Y2d.reshape(out_shape);
 }
 
 Tensor Linear::backward(const Tensor& dY)
 {
-    this->dW=multiply(this->cached_X,true,dY,false);
-    this->db=sum_rows(dY);
-    Tensor dX=multiply(dY,false,this->W,true);
-    return dX;
+    int d_out=dY.shape.back();
+    int batch_seq=dY.total_elements()/d_out;
+    int d_in=W.shape[0];
+    
+    Tensor dY2d=dY.reshape({batch_seq,d_out});
+    Tensor X2d=this->cached_X.reshape({batch_seq,d_in});
+    
+    this->dW=multiply(X2d,true,dY2d,false);
+    this->db=sum_rows(dY2d);
+    
+    Tensor dX2d=multiply(dY2d,false,this->W,true);
+    return dX2d.reshape(this->cached_X.shape);
 }
 
 std::vector<Tensor*> Linear::get_weights() {return {&this->W,&this->b};}

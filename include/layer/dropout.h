@@ -10,7 +10,7 @@ class Dropout:public Layer
     public:
         Dropout(float p=0.3f);
         ~Dropout()=default;
-        Tensor forward(const Tensor& X,const Tensor* mask=nullptr) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
         std::vector<Tensor*> get_weights() override {return {};}
         std::vector<Tensor*> get_grads() override {return {};}

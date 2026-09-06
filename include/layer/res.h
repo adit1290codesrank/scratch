@@ -14,7 +14,7 @@ class Res:public Layer
         void add_main(Layer* layer);
         void add_skip(Layer* layer);
 
-        Tensor forward(const Tensor& X) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 
         std::vector<Tensor*> get_weights() override;

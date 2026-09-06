@@ -12,7 +12,7 @@ LayerNorm::LayerNorm(int dimension):dimension(dimension)
 std::vector<Tensor*> LayerNorm::get_weights() { return {&g,&b}; }
 std::vector<Tensor*> LayerNorm::get_grads() { return {&dg,&db}; }
 
-Tensor LayerNorm::forward(const Tensor& X,const Tensor* mask)
+Tensor LayerNorm::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
     Tensor Y=Tensor::zeros(X.shape);

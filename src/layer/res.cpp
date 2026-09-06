@@ -10,7 +10,7 @@ void Res::add_main(Layer* layer){main.push_back(layer);}
 
 void Res::add_skip(Layer* layer){skip.push_back(layer);}
 
-Tensor Res::forward(const Tensor& X)
+Tensor Res::forward(const Tensor& X,const Tensor* pad_mask)
 {
     Tensor F=X;
     for(auto layer:main) F=layer->forward(F);

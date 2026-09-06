@@ -13,12 +13,12 @@ void GPT::compile(Optimizer* opt,Loss* loss)
     this->loss=loss;
 }
 
-Tensor GPT::forward(const Tensor& X,const Tensor* mask)
+Tensor GPT::forward(const Tensor& X,const Tensor* pad_mask)
 {
-    Tensor Y=embed.forward(X,mask);
-    for(auto& block:blocks)Y=block->forward(Y,mask);
-    Y=final_norm.forward(Y,mask);
-    Y=lm_head.forward(Y,mask);
+    Tensor Y=embed.forward(X,pad_mask);
+    for(auto& block:blocks)Y=block->forward(Y,pad_mask);
+    Y=final_norm.forward(Y,pad_mask);
+    Y=lm_head.forward(Y,pad_mask);
     softmax_forward(Y); 
     return Y;
 }
@@ -70,11 +70,11 @@ std::vector<Layer*> GPT::get_layers()
     return l;
 }
 
-float GPT::train_step(const Tensor& X,const Tensor& targets,const Tensor* mask)
+float GPT::train_step(const Tensor& X,const Tensor& targets,const Tensor* pad_mask)
 {
     for(auto grad:get_all_grads()) cudaMemset(grad->get_data(),0,grad->total_elements()*sizeof(float));
 
-    Tensor probs=forward(X,mask);
+    Tensor probs=forward(X,pad_mask);
     float loss_val=loss->calculate_loss(probs,targets);
     Tensor dY=loss->backward_loss(probs,targets);
     

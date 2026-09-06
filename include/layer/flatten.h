@@ -9,6 +9,6 @@ class Flatten:public Layer
         std::vector<int> cached_shape;
 
     public:
-        Tensor forward(const Tensor& X) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 };

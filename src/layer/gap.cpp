@@ -1,6 +1,6 @@
 #include "../../include/layer/gap.h"
 
-Tensor GAP::forward(const Tensor& X)
+Tensor GAP::forward(const Tensor& X,const Tensor* pad_mask)
 {
     n=X.shape[0];c=X.shape[1];h=X.shape[2];w=X.shape[3];
 

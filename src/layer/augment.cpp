@@ -6,7 +6,7 @@ Augment::Augment(bool flip,int max,int hole):is_training(true),flip(flip),max(ma
 
 Augment::~Augment(){free_augment(pgpu);}
 
-Tensor Augment::forward(const Tensor& X)
+Tensor Augment::forward(const Tensor& X,const Tensor* pad_mask)
 {
     if(!is_training) return X;
 

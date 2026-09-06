@@ -6,7 +6,7 @@ BatchNorm::BatchNorm(int n,float e,float m):n(n),e(e),m(m),is_training(true)
     g=Tensor::ones({n});b=Tensor::zeros({n});dg=Tensor::zeros({n});db=Tensor::zeros({n});rm=Tensor::zeros({n});rv=Tensor::ones({n});
 }
 
-Tensor BatchNorm::forward(const Tensor& X)
+Tensor BatchNorm::forward(const Tensor& X,const Tensor* pad_mask)
 {
     cached_X=X;
     int n=X.shape[0];

@@ -13,7 +13,7 @@ class LayerNorm:public Layer
     public:
         LayerNorm(int dimension);
 
-        Tensor forward(const Tensor& X,const Tensor* mask=nullptr) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 
         std::vector<Tensor*> get_weights() override;

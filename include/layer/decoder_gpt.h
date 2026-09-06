@@ -17,7 +17,7 @@ class DecoderGPT:public Layer
     public:
         DecoderGPT(int dmodel,int heads,int dff,int layers,float dr=0.1f);
 
-        Tensor forward(const Tensor& X,const Tensor* mask=nullptr) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(Tensor const& dY) override;
 
         std::vector<Tensor*> get_weights() override;

@@ -43,25 +43,25 @@ std::vector<Tensor*> DecoderGPT::get_grads()
 void DecoderGPT::train(){attn_dropout.train();ffn_dropout.train();}
 void DecoderGPT::eval(){attn_dropout.eval();ffn_dropout.eval();}
 
-Tensor DecoderGPT::forward(const Tensor& X,const Tensor* mask)
+Tensor DecoderGPT::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
 
     Tensor Y=Tensor::zeros(X.shape);
-    layernorm_forward(X.get_data(),g1.get_data(),b1.get_data(),Y.get_data(),X.rows(),dmodel);
+    layernorm_forward(X.get_data(),g1.get_data(),b1.get_data(),Y.get_data(),X.total_elements()/dmodel,dmodel);
 
     this->cached_Q=Wq.forward(Y);
     this->cached_K=Wk.forward(Y);
     this->cached_V=Wv.forward(Y);
 
-    masked_attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_S,mask);
+    masked_attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_S,pad_mask);
     Y=Wo.forward(Y);
     Y=attn_dropout.forward(Y);
 
     Y=add(Y,X);
 
     this->cached_temp=Y;
-    layernorm_forward(this->cached_temp.get_data(),g2.get_data(),b2.get_data(),Y.get_data(),Y.rows(),dmodel);
+    layernorm_forward(this->cached_temp.get_data(),g2.get_data(),b2.get_data(),Y.get_data(),Y.total_elements()/dmodel,dmodel);
 
     Y=FFN1.forward(Y);
     relu_forward(Y);
@@ -78,12 +78,13 @@ Tensor DecoderGPT::backward(Tensor const& dY)
 {
     Tensor dX=ffn_dropout.backward(dY);
     dX=FFN2.backward(dX);
-    Tensor temp=Tensor::zeros(dX.shape);
-    relu_backward(dX,this->cached_relu,temp);
-    dX=FFN1.backward(temp);
+    Tensor relu_dx=Tensor::zeros(dX.shape);
+    relu_backward(dX,this->cached_relu,relu_dx);
+    dX=FFN1.backward(relu_dx);
   
-    layernorm_backward(dX.get_data(),cached_temp.get_data(),g2.get_data(),dg2.get_data(),db2.get_data(),temp.get_data(),dY.rows(),dmodel);
-    dX=add(dY,temp);
+    Tensor ln_dx=Tensor::zeros(dX.shape);
+    layernorm_backward(dX.get_data(),cached_temp.get_data(),g2.get_data(),dg2.get_data(),db2.get_data(),ln_dx.get_data(),dY.total_elements()/dmodel,dmodel);
+    dX=add(dY,ln_dx);
   
     Tensor dtemp=dX;
   
@@ -95,9 +96,10 @@ Tensor DecoderGPT::backward(Tensor const& dY)
   
     dQ=Wq.backward(dQ);dK=Wk.backward(dK);dV=Wv.backward(dV);
     dX=add(add(dQ,dK),dV);
-  
-    layernorm_backward(dX.get_data(),cached_X.get_data(),g1.get_data(),dg1.get_data(),db1.get_data(),temp.get_data(),dY.rows(),dmodel);
-    dX=add(dtemp,temp);
-  
+    
+    Tensor ln1_dx=Tensor::zeros(dX.shape);
+    layernorm_backward(dX.get_data(),cached_X.get_data(),g1.get_data(),dg1.get_data(),db1.get_data(),ln1_dx.get_data(),dY.total_elements()/dmodel,dmodel);
+    
+    dX=add(dtemp,ln1_dx);
     return dX;
 }

@@ -19,7 +19,7 @@ std::vector<Tensor*> Conv2D::get_weights(){return {&this->W,&this->b};}
 std::vector<Tensor*> Conv2D::get_grads(){return {&this->dW,&this->db};}
 
 
-Tensor Conv2D::forward(const Tensor& X)
+Tensor Conv2D::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
 

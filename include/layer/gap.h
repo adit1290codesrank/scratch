@@ -11,7 +11,7 @@ class GAP:public Layer
         GAP()=default;
         ~GAP() override=default;
 
-        Tensor forward(const Tensor& X) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 };
 

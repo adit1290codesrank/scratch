@@ -49,7 +49,7 @@ __global__ void softmax_forward_kernel(float *X,int rows,int cols)
 
 void softmax_forward(Tensor& X)
 {
-    int rows=X.rows(),cols=X.cols();
+    int cols=X.shape.back(),rows=X.total_elements()/cols;
     int threads=256;
     int blocks=(rows+threads-1)/threads;
     softmax_forward_kernel<<<blocks,threads>>>(X.get_data(),rows,cols);

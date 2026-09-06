@@ -15,7 +15,7 @@ std::vector<Tensor*> Embedding::get_weights(){return {&W_token,&W_pos};}
 
 std::vector<Tensor*> Embedding::get_grads(){return {&dW_token,&dW_pos};}
 
-Tensor Embedding::forward(const Tensor& X,const Tensor* mask)
+Tensor Embedding::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
     int batch=X.rows(),seq_len=X.cols();

@@ -44,7 +44,7 @@ void Encoder::train(){attn_dropout.train();ffn_dropout.train();}
 void Encoder::eval(){attn_dropout.eval();ffn_dropout.eval();}
 
 
-Tensor Encoder::forward(const Tensor& X,const Tensor* mask)
+Tensor Encoder::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
 
@@ -55,7 +55,7 @@ Tensor Encoder::forward(const Tensor& X,const Tensor* mask)
     this->cached_K=Wk.forward(Y);
     this->cached_V=Wv.forward(Y);
 
-    attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_attn,mask);
+    attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_attn,pad_mask);
     Y=Wo.forward(Y);
     Y=attn_dropout.forward(Y);
 

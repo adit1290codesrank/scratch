@@ -16,7 +16,7 @@ class Conv2D:public Layer
     public:
         Conv2D(int cin,int cout,int k,int s=1,int p=0,Init init=Init::KAIMING);
 
-        Tensor forward(const Tensor& X) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 
         std::vector<Tensor*> get_weights() override;

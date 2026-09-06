@@ -13,7 +13,7 @@ class Embedding:public Layer
     public:
         Embedding(int vocab_size,int dmodel,int max_seq=1024);
 
-        Tensor forward(const Tensor& X,const Tensor* mask=nullptr) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 
         std::vector<Tensor*> get_weights() override;

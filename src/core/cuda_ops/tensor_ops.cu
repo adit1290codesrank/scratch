@@ -169,9 +169,9 @@ void multiply_conv_backward_dW(Tensor& dW,const Tensor& dYflat,const Tensor& Xco
 }
 extern void softmax_forward(Tensor& X);
 
-void attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& Out,int heads,Tensor& S,const Tensor* mask)
+void attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& Z,int heads,Tensor& S,const Tensor* mask)
 {
-    int batch_seq=Q.rows(),dmodel=Q.cols();
+    int batch_seq=Q.rows(),dmodel=Q.shape.back();
     
     int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
     
@@ -249,9 +249,9 @@ __global__ void softmax_attn_backward_kernel(float* dS,const float* S,int seq_le
     }
 }
 
-void attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int heads)
+void attention_backward(Tensor& dZ,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int heads)
 {
-    int batch_seq=Q.rows(),d_model=Q.cols();
+    int batch_seq=Q.rows(),d_model=Q.shape.back();
     int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
     int dimension=d_model/heads;
     
@@ -262,14 +262,14 @@ void attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Te
     
     for(int i=0;i<batch;i++)
     {
-        float* batch_S=S.get_data()+(i*heads*seq_len*seq_len),*batch_dAttn=dAttn.get_data()+(i*seq_len*d_model),*batch_dV=dV.get_data()+(i*seq_len*d_model);
-        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&alpha,batch_dAttn,d_model,dimension,batch_S,seq_len,(seq_len*seq_len),&beta,batch_dV,d_model,dimension,heads);
+        float* batch_S=S.get_data()+(i*heads*seq_len*seq_len),*batch_dZ=dZ.get_data()+(i*seq_len*d_model),*batch_dV=dV.get_data()+(i*seq_len*d_model);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&alpha,batch_dZ,d_model,dimension,batch_S,seq_len,(seq_len*seq_len),&beta,batch_dV,d_model,dimension,heads);
     }
     
     for(int i=0;i<batch;i++)
     {
-        float* batch_dAttn=dAttn.get_data()+(i*seq_len*d_model),*batch_V=V.get_data()+(i*seq_len*d_model),*batch_dS=dS.get_data()+(i*heads*seq_len*seq_len);
-        cublasSgemmStridedBatched(handle,CUBLAS_OP_T,CUBLAS_OP_N,seq_len,seq_len,dimension,&alpha,batch_V,d_model,dimension,batch_dAttn,d_model,dimension,&beta,batch_dS,seq_len,(seq_len*seq_len),heads);
+        float* batch_dZ=dZ.get_data()+(i*seq_len*d_model),*batch_V=V.get_data()+(i*seq_len*d_model),*batch_dS=dS.get_data()+(i*heads*seq_len*seq_len);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_T,CUBLAS_OP_N,seq_len,seq_len,dimension,&alpha,batch_V,d_model,dimension,batch_dZ,d_model,dimension,&beta,batch_dS,seq_len,(seq_len*seq_len),heads);
     }
     
     int total=batch*heads*seq_len;
@@ -301,9 +301,9 @@ __global__ void masked_attention_backward_kernel(float* dS,int seq_len)
     for(int i=t;i<seq_len;i+=s) if(i>seq_row) dS[row*seq_len+i]=0.0f;
 }
 
-void masked_attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& Out,int heads,Tensor& S,const Tensor* mask)
+void masked_attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& Z,int heads,Tensor& S,const Tensor* mask)
 {
-    int batch_seq=Q.rows(),dmodel=Q.cols();
+    int batch_seq=Q.rows(),dmodel=Q.shape.back();
     int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
     int dimension=dmodel/heads,total=batch*heads*seq_len;
 
@@ -325,14 +325,14 @@ void masked_attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Te
 
     for(int i=0;i<batch;i++)
     {
-        float* bS=S.get_data()+(i*heads*seq_len*seq_len),*bV=V.get_data()+(i*seq_len*dmodel),*bOut=Out.get_data()+(i*seq_len*dmodel);
-        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_N,dimension,seq_len,seq_len,&alpha,bV,dmodel,dimension,bS,seq_len,(seq_len*seq_len),&beta,bOut,dmodel,dimension,heads);
+        float* bS=S.get_data()+(i*heads*seq_len*seq_len),*bV=V.get_data()+(i*seq_len*dmodel),*bZ=Z.get_data()+(i*seq_len*dmodel);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_N,dimension,seq_len,seq_len,&alpha,bV,dmodel,dimension,bS,seq_len,(seq_len*seq_len),&beta,bZ,dmodel,dimension,heads);
     }
 }
 
-void masked_attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int heads)
+void masked_attention_backward(Tensor& dZ,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int heads)
 {
-    int batch_seq=Q.rows(),dmodel=Q.cols();
+    int batch_seq=Q.rows(),dmodel=Q.shape.back();
     int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
     int dimension=dmodel/heads,total=batch*heads*seq_len;
 
@@ -343,14 +343,14 @@ void masked_attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tenso
 
     for(int i=0;i<batch;i++)
     {
-        float* bS=S.get_data()+(i*heads*seq_len*seq_len),*bdAttn=dAttn.get_data()+(i*seq_len*dmodel),*bdV=dV.get_data()+(i*seq_len*dmodel);
-        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&alpha,bdAttn,dmodel,dimension,bS,seq_len,(seq_len*seq_len),&beta,bdV,dmodel,dimension,heads);
+        float* bS=S.get_data()+(i*heads*seq_len*seq_len),*bdZ=dZ.get_data()+(i*seq_len*dmodel),*bdV=dV.get_data()+(i*seq_len*dmodel);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&alpha,bdZ,dmodel,dimension,bS,seq_len,(seq_len*seq_len),&beta,bdV,dmodel,dimension,heads);
     }
 
     for(int i=0;i<batch;i++)
     {
-        float* bdAttn=dAttn.get_data()+(i*seq_len*dmodel),*bV=V.get_data()+(i*seq_len*dmodel),*bdS=dS.get_data()+(i*heads*seq_len*seq_len);
-        cublasSgemmStridedBatched(handle,CUBLAS_OP_T,CUBLAS_OP_N,seq_len,seq_len,dimension,&alpha,bV,dmodel,dimension,bdAttn,dmodel,dimension,&beta,bdS,seq_len,(seq_len*seq_len),heads);
+        float* bdZ=dZ.get_data()+(i*seq_len*dmodel),*bV=V.get_data()+(i*seq_len*dmodel),*bdS=dS.get_data()+(i*heads*seq_len*seq_len);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_T,CUBLAS_OP_N,seq_len,seq_len,dimension,&alpha,bV,dmodel,dimension,bdZ,dmodel,dimension,&beta,bdS,seq_len,(seq_len*seq_len),heads);
     }
 
     softmax_attn_backward_kernel<<<total,256>>>(dS.get_data(),S.get_data(),seq_len);

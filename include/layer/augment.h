@@ -13,7 +13,7 @@ class Augment:public Layer
         Augment(bool flip=true,int max=4,int hole=8);
         ~Augment() override;
 
-        Tensor forward(const Tensor& X) override;
+        Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(const Tensor& dY) override;
 
         void eval(){is_training=false;}
