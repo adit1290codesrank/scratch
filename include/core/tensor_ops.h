@@ -18,3 +18,6 @@ void attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Te
 
 void masked_attention_forward(const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& Out,int heads,Tensor& S,const Tensor* mask=nullptr);
 void masked_attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int num_heads);
+
+void embedding_forward(const Tensor& X,const Tensor& W_tok,const Tensor& W_pos,Tensor& Y,int batch,int seq_len,int dmodel);
+void embedding_backward(const Tensor& X,const Tensor& dY,Tensor& dW_tok,Tensor& dW_pos,int batch,int seq_len,int dmodel);

@@ -368,3 +368,36 @@ void masked_attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tenso
         cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&scale,bQ,dmodel,dimension,bdS,seq_len,(seq_len*seq_len),&beta,bdK,dmodel,dimension,heads);
     }
 }
+
+__global__ void embedding_forward_kernel(const float* X,const float* W_tok,const float* W_pos,float* Y,int seq_len,int dmodel,int total)
+{
+    int idx=blockIdx.x*blockDim.x+threadIdx.x,s=blockDim.x*gridDim.x;
+    for(int i=idx;i<total;i+=s)
+    {
+        int d=i%dmodel,seq=(i/dmodel)%seq_len,tok=(int)X[i/dmodel];
+        Y[i]=W_tok[tok*dmodel+d]+W_pos[seq*dmodel+d];
+    }
+}
+
+__global__ void embedding_backward_kernel(const float* X,const float* dY,float* dW_tok,float* dW_pos,int seq_len,int dmodel,int total)
+{
+    int idx=blockIdx.x*blockDim.x+threadIdx.x,s=blockDim.x*gridDim.x;
+    for(int i=idx;i<total;i+=s)
+    {
+        int d=i%dmodel,seq=(i/dmodel)%seq_len,tok=(int)X[i/dmodel];
+        atomicAdd(&dW_tok[tok*dmodel+d],dY[i]);
+        atomicAdd(&dW_pos[seq*dmodel+d],dY[i]);
+    }
+}
+
+void embedding_forward(const Tensor& X,const Tensor& W_tok,const Tensor& W_pos,Tensor& Y,int batch,int seq_len,int dmodel)
+{
+    int total=batch*seq_len*dmodel,blocks=(total+255)/256;
+    embedding_forward_kernel<<<blocks,256>>>(X.get_data(),W_tok.get_data(),W_pos.get_data(),Y.get_data(),seq_len,dmodel,total);
+}
+
+void embedding_backward(const Tensor& X,const Tensor& dY,Tensor& dW_tok,Tensor& dW_pos,int batch,int seq_len,int dmodel)
+{
+    int total=batch*seq_len*dmodel,blocks=(total+255)/256;
+    embedding_backward_kernel<<<blocks,256>>>(X.get_data(),dY.get_data(),dW_tok.get_data(),dW_pos.get_data(),seq_len,dmodel,total);
+}
