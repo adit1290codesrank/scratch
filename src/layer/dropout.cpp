@@ -4,7 +4,7 @@
 
 Dropout::Dropout(float p):p(p),is_training(true){}
 
-Tensor Dropout::forward(const Tensor& X)
+Tensor Dropout::forward(const Tensor& X,const Tensor* mask)
 {
     if(!is_training||p==0.0f) return X;
 

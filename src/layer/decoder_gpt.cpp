@@ -1,20 +1,20 @@
-#include "../../include/layer/encoder.h"
-#include "../../include/core/tensor_ops.h"                                                                                                                                                                                     
+#include "../../include/layer/decoder_gpt.h"
+#include "../../include/core/tensor_ops.h"
 #include "../../include/core/activation_ops.h"
 #include "../../include/core/layernorm_ops.h"
 #include <cmath>
 #include <stdexcept>
 
-Encoder::Encoder(int dmodel,int heads,int dff,int layers,float dr):dmodel(dmodel),heads(heads),Wq(dmodel,dmodel,Init::KAIMING,0.02f),Wk(dmodel,dmodel,Init::KAIMING,0.02f),Wv(dmodel,dmodel,Init::KAIMING,0.02f),Wo(dmodel,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),FFN1(dmodel,dff,Init::KAIMING,0.02f),FFN2(dff,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),attn_dropout(dr),ffn_dropout(dr)
+DecoderGPT::DecoderGPT(int dmodel,int heads,int dff,int layers,float dr):dmodel(dmodel),heads(heads),Wq(dmodel,dmodel,Init::KAIMING,0.02f),Wk(dmodel,dmodel,Init::KAIMING,0.02f),Wv(dmodel,dmodel,Init::KAIMING,0.02f),Wo(dmodel,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),FFN1(dmodel,dff,Init::KAIMING,0.02f),FFN2(dff,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),attn_dropout(dr),ffn_dropout(dr)
 {
-    if(dmodel%heads!=0) throw std::invalid_argument("dmodel must be divisible by nuumber of heads");
+    if(dmodel%heads!=0) throw std::invalid_argument("dmodel must be divisible by heads");
     this->dimension=dmodel/heads;
     g1=Tensor::ones({dmodel});g2=Tensor::ones({dmodel});
     b1=Tensor::zeros({dmodel});b2=Tensor::zeros({dmodel});
     dg1=Tensor::zeros({dmodel});dg2=Tensor::zeros({dmodel});db1=Tensor::zeros({dmodel});db2=Tensor::zeros({dmodel});
 }
 
-std::vector<Tensor*> Encoder::get_weights()
+std::vector<Tensor*> DecoderGPT::get_weights()
 {
     std::vector<Tensor*> weights;
     auto wq=Wq.get_weights();weights.insert(weights.end(),wq.begin(),wq.end());
@@ -27,7 +27,7 @@ std::vector<Tensor*> Encoder::get_weights()
     return weights;
 }
 
-std::vector<Tensor*> Encoder::get_grads()
+std::vector<Tensor*> DecoderGPT::get_grads()
 {
     std::vector<Tensor*> grads;
     auto wq=Wq.get_grads();grads.insert(grads.end(),wq.begin(),wq.end());
@@ -40,11 +40,10 @@ std::vector<Tensor*> Encoder::get_grads()
     return grads;
 }
 
-void Encoder::train(){attn_dropout.train();ffn_dropout.train();}
-void Encoder::eval(){attn_dropout.eval();ffn_dropout.eval();}
+void DecoderGPT::train(){attn_dropout.train();ffn_dropout.train();}
+void DecoderGPT::eval(){attn_dropout.eval();ffn_dropout.eval();}
 
-
-Tensor Encoder::forward(const Tensor& X,const Tensor* mask)
+Tensor DecoderGPT::forward(const Tensor& X,const Tensor* mask)
 {
     this->cached_X=X;
 
@@ -55,7 +54,7 @@ Tensor Encoder::forward(const Tensor& X,const Tensor* mask)
     this->cached_K=Wk.forward(Y);
     this->cached_V=Wv.forward(Y);
 
-    attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_attn,mask);
+    masked_attention_forward(this->cached_Q,this->cached_K,this->cached_V,Y,heads,this->cached_S,mask);
     Y=Wo.forward(Y);
     Y=attn_dropout.forward(Y);
 
@@ -75,7 +74,7 @@ Tensor Encoder::forward(const Tensor& X,const Tensor* mask)
     return Y;
 }
 
-Tensor Encoder::backward(Tensor const& dY)
+Tensor DecoderGPT::backward(Tensor const& dY)
 {
     Tensor dX=ffn_dropout.backward(dY);
     dX=FFN2.backward(dX);
@@ -92,7 +91,7 @@ Tensor Encoder::backward(Tensor const& dY)
     dX=Wo.backward(dX);
   
     Tensor dQ=Tensor::zeros(cached_Q.shape),dK=Tensor::zeros(cached_K.shape),dV=Tensor::zeros(cached_V.shape);
-    attention_backward(dX,cached_Q,cached_K,cached_V,cached_attn,dQ,dK,dV,heads);
+    masked_attention_backward(dX,cached_Q,cached_K,cached_V,cached_S,dQ,dK,dV,heads);
   
     dQ=Wq.backward(dQ);dK=Wk.backward(dK);dV=Wv.backward(dV);
     dX=add(add(dQ,dK),dV);

@@ -13,7 +13,7 @@ Linear::Linear(int in,int out,Init init,float custom_std):W({in,out}),b({1,out})
     db=Tensor::zeros({1,out});  
 }
 
-Tensor Linear::forward(const Tensor& X)
+Tensor Linear::forward(const Tensor& X,const Tensor* mask)
 {
     this->cached_X=X;
     Tensor Y=X*W;

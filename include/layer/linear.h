@@ -15,7 +15,7 @@ class Linear:public Layer
     public:
 
         Linear(int in,int out,Init init=Init::KAIMING,float custom_std=-1.0f);
-        Tensor forward(Tensor const& X) override;
+        Tensor forward(const Tensor& X,const Tensor* mask=nullptr) override;
         Tensor backward(Tensor const& dY) override;
 
         std::vector<Tensor*> get_weights() override;

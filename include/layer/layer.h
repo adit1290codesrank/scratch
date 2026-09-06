@@ -7,7 +7,7 @@ class Layer
     public:
         virtual ~Layer()=default;
 
-        virtual Tensor forward(const Tensor& X)=0;
+        virtual Tensor forward(const Tensor& X,const Tensor* mask=nullptr)=0;
         virtual Tensor backward(const Tensor& dY)=0;
 
         virtual std::vector<Tensor*> get_weights() {return {};}
