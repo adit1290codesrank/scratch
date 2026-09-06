@@ -24,3 +24,5 @@ weights/
 data/
 build/
 output/
+
+*.bat
