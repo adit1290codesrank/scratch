@@ -2,11 +2,12 @@
 #include "../../include/core/tensor_ops.h"
 #include <cmath>
 
-Linear::Linear(int in,int out,Init init):W({in,out}),b({1,out}),dW({in,out}),db({1,out}),cached_X({0})
+Linear::Linear(int in,int out,Init init,float custom_std):W({in,out}),b({1,out}),dW({in,out}),db({1,out}),cached_X({0})
 {
-    if(init==Init::ZEROS) W=Tensor::zeros({in,out});    
-    else if(init==Init::XAVIER) W=Tensor::randn({in,out}, 0.0f, (float)(sqrt(2.0f/(in+out))));
-    else if (init==Init::KAIMING) W=Tensor::randn({in, out},0.0f,(float)(sqrt(2.0f/(in))));
+    if(custom_std>0.0f) W=Tensor::randn({in,out},0.0f,custom_std);
+    else if(init==Init::ZEROS) W=Tensor::zeros({in,out});    
+    else if(init==Init::XAVIER) W=Tensor::randn({in,out},0.0f,(float)(sqrt(2.0f/(in+out))));
+    else if(init==Init::KAIMING) W=Tensor::randn({in,out},0.0f,(float)(sqrt(2.0f/in)));
     b=Tensor::zeros({1,out});
     dW=Tensor::zeros({in,out});
     db=Tensor::zeros({1,out});  

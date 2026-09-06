@@ -11,3 +11,7 @@ Tensor sum_spatial(const Tensor& dYflat);
 Tensor multiply_conv_forward(const Tensor& W,const Tensor& Xcol);
 Tensor multiply_conv_backward_dX(const Tensor& W,const Tensor& dYflat);
 void multiply_conv_backward_dW(Tensor& dW,const Tensor& dYflat,const Tensor& Xcol);
+
+void attention_forward(const Tensor& Q,const Tensor& K, const Tensor& V,Tensor& Z,int heads,Tensor& S);
+void attention_backward(const Tensor& dZ,const Tensor& Q,const Tensor& K,const Tensor& V,Tensor& dQ,Tensor& dK,Tensor& dV,int heads);
+void attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int num_heads);

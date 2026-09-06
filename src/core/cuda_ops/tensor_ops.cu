@@ -1,5 +1,6 @@
 #include "../../../include/core/tensor_ops.h"
 #include "../../../include/core/context.h"
+#include <cuda_runtime.h>
 #include <stdexcept>
 
 Tensor multiply(const Tensor& a,bool transA,const Tensor& b,bool transB)
@@ -160,4 +161,124 @@ void multiply_conv_backward_dW(Tensor& dW,const Tensor& dYflat,const Tensor& Xco
     float alpha=1.0f,beta=1.0f;
     cudaMemset(dW.get_data(),0,cout*fan_in*sizeof(float));
     for(int n=0;n<batch;n++) cublasSgemm(handle,CUBLAS_OP_T,CUBLAS_OP_N,fan_in,cout,spatial,&alpha,Xcol.get_data()+n*(fan_in*spatial),spatial,dYflat.get_data()+n*(cout*spatial),spatial,&beta,dW.get_data(),fan_in);
+}
+extern void softmax_forward(Tensor& X);
+
+void attention_forward(const Tensor& Q,const Tensor& K, const Tensor& V,Tensor& Z,int heads,Tensor& S)
+{
+    int batch_seq=Q.rows(),dmodel=Q.cols();
+    
+    int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
+    
+    int dimension=dmodel/heads;
+    
+    S=Tensor::zeros({batch,heads,seq_len,seq_len});
+    
+    cublasHandle_t handle=Context::get_instance().get_cublas_handle();
+    float alpha=1.0f/sqrtf((float)dimension);float beta=0.0f;
+    
+    for(int i=0;i<batch;i++) 
+    {
+        float* batch_Q=Q.get_data()+(i*seq_len*dmodel),*batch_K=K.get_data()+(i*seq_len*dmodel),*batch_S=S.get_data()+(i*heads*seq_len*seq_len);
+        
+        cublasSgemmStridedBatched(
+            handle,
+            CUBLAS_OP_T,CUBLAS_OP_N,
+            seq_len,seq_len,dimension,
+            &alpha,
+            batch_K,dmodel,dimension,
+            batch_Q,dmodel,dimension,
+            &beta,
+            batch_S,seq_len,(seq_len*seq_len),
+            heads
+        );
+    }
+    
+    softmax_forward(S);
+    
+    alpha = 1.0f;
+    for(int i = 0; i < batch; i++) 
+    {
+        float* batch_S=S.get_data()+(i*heads*seq_len*seq_len),*batch_V = V.get_data()+(i*seq_len*dmodel),*batch_Z= Z.get_data()+(i*seq_len*dmodel);
+        
+        cublasSgemmStridedBatched(
+            handle,
+            CUBLAS_OP_N,CUBLAS_OP_N,
+            dimension,seq_len,seq_len,
+            &alpha,
+            batch_V,dmodel,dimension,
+            batch_S,seq_len,(seq_len*seq_len),
+            &beta,
+            batch_Z,dmodel,dimension,
+            heads
+        );
+    }
+}
+
+__global__ void softmax_attn_backward_kernel(float* dS,const float* S,int seq_len)
+{
+    int r=blockIdx.x,t=threadIdx.x,s=blockDim.x;
+    
+    float local_dot=0.0f;
+    for(int i=t;i<seq_len;i+=s)
+    {
+        int idx=r*seq_len+i;
+        local_dot+=dS[idx]*S[idx];
+    }
+    
+    __shared__ float s_dot[256];
+    s_dot[t]=local_dot;
+    __syncthreads();
+    
+    for(int s_step=128;s_step>0;s_step>>=1){if(t<s_step) s_dot[t]+=s_dot[t+s_step];__syncthreads();}
+    
+    __shared__ float r_dot;
+    if(t==0) r_dot=s_dot[0];
+    __syncthreads();
+    
+    for(int i=t;i<seq_len;i+=s)
+    {
+        int idx=r*seq_len+i;
+        dS[idx]=S[idx]*(dS[idx]-r_dot);
+    }
+}
+
+void attention_backward(Tensor& dAttn,Tensor& Q,Tensor& K,Tensor& V,Tensor& S,Tensor& dQ,Tensor& dK,Tensor& dV,int heads)
+{
+    int batch_seq=Q.rows(),d_model=Q.cols();
+    int batch=(Q.shape.size()>2)?Q.shape[0]:1,seq_len=(Q.shape.size()>2)?Q.shape[1]:batch_seq;
+    int dimension=d_model/heads;
+    
+    cublasHandle_t handle=Context::get_instance().get_cublas_handle();
+    float alpha=1.0f,beta=0.0f;
+    
+    Tensor dS({batch,heads,seq_len,seq_len});
+    
+    for(int i=0;i<batch;i++)
+    {
+        float* batch_S=S.get_data()+(i*heads*seq_len*seq_len),*batch_dAttn=dAttn.get_data()+(i*seq_len*d_model),*batch_dV=dV.get_data()+(i*seq_len*d_model);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&alpha,batch_dAttn,d_model,dimension,batch_S,seq_len,(seq_len*seq_len),&beta,batch_dV,d_model,dimension,heads);
+    }
+    
+    for(int i=0;i<batch;i++)
+    {
+        float* batch_dAttn=dAttn.get_data()+(i*seq_len*d_model),*batch_V=V.get_data()+(i*seq_len*d_model),*batch_dS=dS.get_data()+(i*heads*seq_len*seq_len);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_T,CUBLAS_OP_N,seq_len,seq_len,dimension,&alpha,batch_V,d_model,dimension,batch_dAttn,d_model,dimension,&beta,batch_dS,seq_len,(seq_len*seq_len),heads);
+    }
+    
+    int total=batch*heads*seq_len;
+    softmax_attn_backward_kernel<<<total,256>>>(dS.get_data(),S.get_data(),seq_len);
+    
+    float scale=1.0f/sqrtf((float)dimension);
+    for(int i=0;i<batch;i++)
+    {
+        float* batch_dS=dS.get_data()+(i*heads*seq_len*seq_len),*batch_K=K.get_data()+(i*seq_len*d_model),*batch_dQ=dQ.get_data()+(i*seq_len*d_model);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_N,dimension,seq_len,seq_len,&scale,batch_K,d_model,dimension,batch_dS,seq_len,(seq_len*seq_len),&beta,batch_dQ,d_model,dimension,heads);
+    }
+    
+    for(int i=0;i<batch;i++)
+    {
+        float* batch_dS=dS.get_data()+(i*heads*seq_len*seq_len),*batch_Q=Q.get_data()+(i*seq_len*d_model),*batch_dK=dK.get_data()+(i*seq_len*d_model);
+        cublasSgemmStridedBatched(handle,CUBLAS_OP_N,CUBLAS_OP_T,dimension,seq_len,seq_len,&scale,batch_Q,d_model,dimension,batch_dS,seq_len,(seq_len*seq_len),&beta,batch_dK,d_model,dimension,heads);
+    }
 }
