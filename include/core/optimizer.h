@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include <iosfwd>
 #include "../layer/layer.h"
 
 class Optimizer
@@ -8,13 +9,16 @@ class Optimizer
     protected:
         std::vector<Layer*> layers;
         float lr;
-    
+
     public:
         Optimizer(std::vector<Layer*> layers,float lr):layers(layers),lr(lr){}
         virtual ~Optimizer()=default;
 
         virtual void step() = 0;
         virtual void set_lr(float new_lr)=0;
+
+        virtual void save_state(std::ostream& os)=0;
+        virtual void load_state(std::istream& is)=0;
 };
 
 class Adam:public Optimizer
@@ -31,5 +35,8 @@ class Adam:public Optimizer
         Adam(std::vector<Layer*> layers,float lr=0.001f,float beta1=0.9f,float beta2=0.999f,float eps=1e-8f,float wd=1e-4f);
         void step() override;
 
-        void set_lr(float new_lr){this->lr=new_lr;}
+        void set_lr(float new_lr) override {this->lr=new_lr;}
+
+        void save_state(std::ostream& os) override;
+        void load_state(std::istream& is) override;
 };

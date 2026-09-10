@@ -6,7 +6,11 @@ class Context
 {
     private:
         cublasHandle_t handle;
-        Context(){if(cublasCreate(&handle)!=CUBLAS_STATUS_SUCCESS)throw std::runtime_error("cuBLAS initialization failed!");}
+        Context()
+        {
+            if(cublasCreate(&handle)!=CUBLAS_STATUS_SUCCESS)throw std::runtime_error("cuBLAS initialization failed!");
+            cublasSetMathMode(handle,CUBLAS_TF32_TENSOR_OP_MATH);
+        }
         ~Context(){cublasDestroy(handle);}
 
     public:

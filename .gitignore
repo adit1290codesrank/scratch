@@ -26,3 +26,7 @@ build/
 output/
 
 *.bat
+# session binaries
+bpe_train
+gpt_train
+gpt_chat

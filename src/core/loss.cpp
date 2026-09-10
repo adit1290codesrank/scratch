@@ -43,14 +43,16 @@ Tensor LSCrossEntropyLoss::backward_loss(const Tensor& pred,const Tensor& target
     return dY;
 }
 
+SparseCrossEntropyLoss::SparseCrossEntropyLoss(int ignore_index) : ignore_index(ignore_index) {}
+
 float SparseCrossEntropyLoss::calculate_loss(const Tensor& pred,const Tensor& target)
 {
-    return sparse_ce_forward(pred,target);
+    return sparse_ce_forward(pred,target,this->ignore_index);
 }
 
 Tensor SparseCrossEntropyLoss::backward_loss(const Tensor& pred,const Tensor& target)
 {
     Tensor dY(pred.shape);
-    sparse_ce_backward(pred,target,dY);
+    sparse_ce_backward(pred,target,dY,this->ignore_index);
     return dY;
 }
