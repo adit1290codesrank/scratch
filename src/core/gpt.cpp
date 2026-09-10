@@ -1,6 +1,6 @@
 #include "../../include/core/gpt.h"
 #include "../../include/core/activation_ops.h"
-#include <cuda_runtime.h> // For softmax during inference if needed
+#include "../../include/core/grad_ops.h"
 #include <fstream>
 #include <stdexcept>
 #include <cstdint>
@@ -84,13 +84,15 @@ std::vector<Layer*> GPT::get_layers()
 
 float GPT::train_step(const Tensor& X,const Tensor& targets,const Tensor* pad_mask)
 {
-    for(auto grad:get_all_grads()) cudaMemset(grad->get_data(),0,grad->total_elements()*sizeof(float));
+    std::vector<Tensor*> grads=get_all_grads();
+    zero_grads(grads);
 
     Tensor probs=forward(X,pad_mask);
     float loss_val=loss->calculate_loss(probs,targets);
     Tensor dY=loss->backward_loss(probs,targets);
 
     backward(dY);
+    clip_grad_norm(grads,1.0f);
     optimizer->step();
 
     return loss_val;
