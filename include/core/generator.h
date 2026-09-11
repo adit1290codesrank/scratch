@@ -14,10 +14,5 @@ struct GenConfig
     uint64_t seed=1234;
 };
 
-// continue from a raw token sequence; stops on eot_id, stop_id, or length.
-// returns only the newly generated tokens (terminator included if hit).
-std::vector<int> generate(GPT& model,const std::vector<int>& prompt_ids,int max_seq,const GenConfig& cfg,int eot_id,int stop_id=-1);
-
-// history = alternating user/bot turns (index 0 = first user turn).
-// builds <|user|> .. <|bot|> .. <|user|> .. <|bot|> framing and completes the bot turn.
+std::vector<int> generate(GPT& model,const std::vector<int>& prompt_ids,int max_seq,const GenConfig& cfg,int eot_id,int stop_id1=-1,int stop_id2=-1);
 std::string chat_generate(GPT& model,BPETokenizer& tok,const std::vector<std::string>& history,int max_seq,const GenConfig& cfg);

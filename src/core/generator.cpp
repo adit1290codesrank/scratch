@@ -80,8 +80,8 @@ std::string chat_generate(GPT& model,BPETokenizer& tok,const std::vector<std::st
     }
     ids.push_back(BOT);
 
-    std::vector<int> gen=generate(model,ids,max_seq,cfg,EOT,USER);
-    if(!gen.empty()&&(gen.back()==EOT||gen.back()==USER)) gen.pop_back();
+    std::vector<int> gen=generate(model,ids,max_seq,cfg,EOT,USER,BOT);
+    if(!gen.empty()&&(gen.back()==EOT||gen.back()==USER||gen.back()==BOT)) gen.pop_back();
 
     std::string s=tok.decode(gen);
     size_t a=s.find_first_not_of(" \t\r\n");
