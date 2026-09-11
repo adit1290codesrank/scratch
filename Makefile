@@ -14,7 +14,7 @@ LDFLAGS := -lcublas -lcurand
 # If the toolkit's lib64 exists, link against it and bake an rpath so the built
 # binaries find the right libcublas/libcurand without LD_LIBRARY_PATH set.
 ifneq ($(CUDA_LIB),)
-LDFLAGS += -L$(CUDA_LIB) -Xcompiler -Wl,-rpath,$(CUDA_LIB)
+LDFLAGS += -L$(CUDA_LIB) -Xlinker -rpath -Xlinker $(CUDA_LIB)
 endif
 
 SRC_DIR := src
