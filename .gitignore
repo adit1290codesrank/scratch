@@ -30,3 +30,4 @@ output/
 bpe_train
 gpt_train
 gpt_chat
+gpt_gen

@@ -2,17 +2,20 @@
 #include <memory>
 #include <vector>
 
+enum class DType { F32, BF16 };
+
 class Tensor
 {
     private:
-        std::shared_ptr<float> data;
+        std::shared_ptr<void> data;
+        DType dtype_=DType::F32;
 
     public:
         std::vector<int> shape;
-        
+
         Tensor():shape({0}){}
         int rows() const {return shape.empty()?0:shape[0];}
-        int cols() const 
+        int cols() const
         {
             if(shape.size()<2) return 1;
             int total=1;
@@ -21,9 +24,13 @@ class Tensor
         }
         size_t total_elements() const {return rows()*cols();}
 
-        Tensor(std::vector<int> shape);
+        DType dtype() const {return dtype_;}
+        size_t elem_size() const {return dtype_==DType::F32?sizeof(float):2;}
+        size_t total_bytes() const {return total_elements()*elem_size();}
 
-        float *get_data() const {return data.get();}
+        Tensor(std::vector<int> shape, DType dt=DType::F32);
+
+        float *get_data() const {return (float*)data.get();}
 
         Tensor reshape(std::vector<int> shape) const;
         static Tensor zeros(std::vector<int> shape);//belongs to class not object

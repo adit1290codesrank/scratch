@@ -3,19 +3,18 @@
 #include "../../include/core/tensor_ops.h"
 #include <stdexcept>
 
-Tensor::Tensor(std::vector<int> shape):shape(shape)
+Tensor::Tensor(std::vector<int> shape, DType dt):dtype_(dt),shape(shape)
 {
-    size_t total=this->total_elements();
-    size_t bytes=total*sizeof(float);
-    float* ptr = device_malloc(bytes);
-    this->data = std::shared_ptr<float>(ptr, [bytes](float* p) {device_free(p, bytes);});
+    size_t bytes=this->total_bytes();
+    void* ptr = device_malloc(bytes);
+    this->data = std::shared_ptr<void>(ptr, [bytes](void* p) {device_free(p, bytes);});
 }
 
 Tensor Tensor::reshape(std::vector<int> new_shape) const
 {
     size_t new_total=1;
     for(int i:new_shape)new_total*=i;
-    
+
     if(new_total!=this->total_elements()) throw std::invalid_argument("Total elements must remain the same in reshape");
     Tensor temp=*this;
     temp.shape=new_shape;
@@ -25,16 +24,14 @@ Tensor Tensor::reshape(std::vector<int> new_shape) const
 Tensor Tensor::zeros(std::vector<int> shape)
 {
     Tensor temp(shape);
-    size_t bytes=temp.total_elements()*sizeof(float);
-    zero_malloc(temp.get_data(),bytes);
+    zero_malloc(temp.get_data(),temp.total_bytes());
     return temp;
 }
 
 Tensor Tensor::ones(std::vector<int> shape)
 {
     Tensor temp(shape);
-    size_t bytes=temp.total_elements()*sizeof(float);
-    one_malloc(temp.get_data(),bytes);
+    one_malloc(temp.get_data(),temp.total_bytes());
     return temp;
 }
 
@@ -47,22 +44,19 @@ Tensor Tensor::randn(std::vector<int> shape,float mean,float std)
 
 Tensor Tensor::clone() const
 {
-    Tensor temp(this->shape);
-    size_t bytes=this->total_elements()*sizeof(float);
-    copy_malloc(temp.get_data(),this->get_data(),bytes);
+    Tensor temp(this->shape,this->dtype_);
+    copy_malloc(temp.get_data(),this->get_data(),this->total_bytes());
     return temp;
 }
 
 void Tensor::copy_from_host(const float* host_data) const
 {
-    size_t bytes=this->total_elements()*sizeof(float);
-    copy_from_host_malloc(this->get_data(),host_data,bytes);
+    copy_from_host_malloc(this->get_data(),host_data,this->total_bytes());
 }
 
 void Tensor::copy_to_host(float* host_data) const
 {
-    size_t bytes=this->total_elements()*sizeof(float);
-    copy_to_host_malloc(host_data,this->get_data(),bytes);
+    copy_to_host_malloc(host_data,this->get_data(),this->total_bytes());
 }
 
 Tensor Tensor::operator*(const Tensor& other) const{return multiply(*this,false,other,false);};
@@ -73,11 +67,10 @@ Tensor Tensor::slice(int start,int end) const
 {
     std::vector<int> new_shape=shape;
     new_shape[0]=end-start;
-    
+
     Tensor temp=Tensor::zeros(new_shape);
-    size_t bytes=temp.total_elements()*sizeof(float);
-    size_t offset=start*(total_elements()/shape[0]);
-    
-    copy_malloc(temp.get_data(),get_data()+offset,bytes);
+    size_t offset_bytes=(size_t)start*(total_elements()/shape[0])*elem_size();
+
+    copy_malloc(temp.get_data(),(char*)get_data()+offset_bytes,temp.total_bytes());
     return temp;
 }
