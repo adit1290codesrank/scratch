@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-std::vector<int> generate(GPT& model,const std::vector<int>& prompt_ids,int max_seq,const GenConfig& cfg,int eot_id,int stop_id)
+std::vector<int> generate(GPT& model,const std::vector<int>& prompt_ids,int max_seq,const GenConfig& cfg,int eot_id,int stop_id1,int stop_id2)
 {
     model.eval();
     std::mt19937_64 rng(cfg.seed);
@@ -60,7 +60,7 @@ std::vector<int> generate(GPT& model,const std::vector<int>& prompt_ids,int max_
 
         out.push_back(next);
         ctx.push_back(next);
-        if(next==eot_id||next==stop_id) break;
+        if(next==eot_id||next==stop_id1||next==stop_id2) break;
     }
     return out;
 }
