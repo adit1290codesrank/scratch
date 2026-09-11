@@ -35,6 +35,9 @@ gpt_train: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_train.cpp
 gpt_chat: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_chat.cpp
 	$(NVCC) $(NVCCFLAGS) scripts/gpt_chat.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
 
+gpt_gen: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_gen.cpp
+      $(NVCC) $(NVCCFLAGS) scripts/gpt_gen.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
