@@ -8,11 +8,11 @@ Tensor Dropout::forward(const Tensor& X,const Tensor* pad_mask)
 {
     if(!is_training||p==0.0f) return X;
 
-    mask=Tensor::zeros(X.shape);
-    Tensor Y=Tensor::zeros(X.shape);
+    mask=Tensor::zeros(X.shape,X.dtype());
+    Tensor Y=Tensor::zeros(X.shape,X.dtype());
 
     unsigned int seed=rand();
-    dropout_forward_gpu(X.get_data(),Y.get_data(),mask.get_data(),p,X.total_elements(),seed);
+    dropout_forward_gpu(X,Y,mask,p,seed);
 
     return Y;
 }
@@ -21,8 +21,7 @@ Tensor Dropout::backward(const Tensor& dY)
 {
     if(!is_training||p==0.0f) return dY;
 
-    Tensor dX=Tensor::zeros(dY.shape);
-    dropout_backward_gpu(dY.get_data(),dX.get_data(),mask.get_data(),p,dY.total_elements());
-
+    Tensor dX=Tensor::zeros(dY.shape,dY.dtype());
+    dropout_backward_gpu(dY,dX,mask,p);
     return dX;
 }

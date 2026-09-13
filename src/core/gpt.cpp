@@ -5,9 +5,9 @@
 #include <stdexcept>
 #include <cstdint>
 
-GPT::GPT(int vocab_size,int dmodel,int heads,int dff,int layers,int max_seq,float dr):vocab_size(vocab_size),dmodel(dmodel),heads(heads),dff(dff),layers(layers),max_seq(max_seq),embed(vocab_size,dmodel,max_seq),final_norm(dmodel),lm_head(dmodel,vocab_size)
+GPT::GPT(int vocab_size,int dmodel,int heads,int dff,int layers,int max_seq,float dr,DType dt):vocab_size(vocab_size),dmodel(dmodel),heads(heads),dff(dff),layers(layers),max_seq(max_seq),embed(vocab_size,dmodel,max_seq,dt),final_norm(dmodel),lm_head(dmodel,vocab_size,Init::KAIMING,-1.0f,dt)
 {
-    for(int i=0;i<layers;i++)blocks.push_back(std::make_unique<DecoderGPT>(dmodel,heads,dff,layers,dr));
+    for(int i=0;i<layers;i++)blocks.push_back(std::make_unique<DecoderGPT>(dmodel,heads,dff,layers,dr,dt));
 }
 
 void GPT::compile(Optimizer* opt,Loss* loss)

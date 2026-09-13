@@ -27,7 +27,7 @@ void device_free(void* ptr, size_t bytes)
 
 void zero_malloc(void *ptr, size_t bytes) {raw_zero_malloc(ptr, bytes);}
 
-void one_malloc(void *ptr, size_t bytes) {raw_one_malloc(ptr, bytes);}
+void one_malloc(void *ptr, size_t count, DType dt) {raw_one_malloc(ptr, count, dt);}
 
 void copy_malloc(void *dest, const void *src, size_t bytes) {raw_copy_malloc(dest, src, bytes);}
 

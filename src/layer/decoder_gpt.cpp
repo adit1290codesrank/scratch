@@ -5,7 +5,7 @@
 #include <cmath>
 #include <stdexcept>
 
-DecoderGPT::DecoderGPT(int dmodel,int heads,int dff,int layers,float dr):dmodel(dmodel),heads(heads),Wq(dmodel,dmodel,Init::KAIMING,0.02f),Wk(dmodel,dmodel,Init::KAIMING,0.02f),Wv(dmodel,dmodel,Init::KAIMING,0.02f),Wo(dmodel,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),FFN1(dmodel,dff,Init::KAIMING,0.02f),FFN2(dff,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers)),attn_dropout(dr),ffn_dropout(dr)
+DecoderGPT::DecoderGPT(int dmodel,int heads,int dff,int layers,float dr,DType dt):dmodel(dmodel),heads(heads),Wq(dmodel,dmodel,Init::KAIMING,0.02f,dt),Wk(dmodel,dmodel,Init::KAIMING,0.02f,dt),Wv(dmodel,dmodel,Init::KAIMING,0.02f,dt),Wo(dmodel,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers),dt),FFN1(dmodel,dff,Init::KAIMING,0.02f,dt),FFN2(dff,dmodel,Init::KAIMING,0.02f/sqrt(2.0f*layers),dt),attn_dropout(dr),ffn_dropout(dr)
 {
     if(dmodel%heads!=0) throw std::invalid_argument("dmodel must be divisible by heads");
     this->dimension=dmodel/heads;
@@ -47,8 +47,8 @@ Tensor DecoderGPT::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
 
-    Tensor Y=Tensor::zeros(X.shape);
-    layernorm_forward(X.get_data(),g1.get_data(),b1.get_data(),Y.get_data(),X.total_elements()/dmodel,dmodel);
+    Tensor Y=Tensor::zeros(X.shape,X.dtype());
+    layernorm_forward(X,g1,b1,Y,X.total_elements()/dmodel,dmodel);
 
     this->cached_Q=Wq.forward(Y);
     this->cached_K=Wk.forward(Y);
@@ -61,7 +61,7 @@ Tensor DecoderGPT::forward(const Tensor& X,const Tensor* pad_mask)
     Y=add(Y,X);
 
     this->cached_temp=Y;
-    layernorm_forward(this->cached_temp.get_data(),g2.get_data(),b2.get_data(),Y.get_data(),Y.total_elements()/dmodel,dmodel);
+    layernorm_forward(this->cached_temp,g2,b2,Y,Y.total_elements()/dmodel,dmodel);
 
     Y=FFN1.forward(Y);
     relu_forward(Y);
@@ -78,12 +78,12 @@ Tensor DecoderGPT::backward(Tensor const& dY)
 {
     Tensor dX=ffn_dropout.backward(dY);
     dX=FFN2.backward(dX);
-    Tensor relu_dx=Tensor::zeros(dX.shape);
+    Tensor relu_dx=Tensor::zeros(dX.shape,dX.dtype());
     relu_backward(dX,this->cached_relu,relu_dx);
     dX=FFN1.backward(relu_dx);
-  
-    Tensor ln_dx=Tensor::zeros(dX.shape);
-    layernorm_backward(dX.get_data(),cached_temp.get_data(),g2.get_data(),dg2.get_data(),db2.get_data(),ln_dx.get_data(),dY.total_elements()/dmodel,dmodel);
+
+    Tensor ln_dx=Tensor::zeros(dX.shape,dX.dtype());
+    layernorm_backward(dX,cached_temp,g2,dg2,db2,ln_dx,dY.total_elements()/dmodel,dmodel);
     dX=add(dY,ln_dx);
   
     Tensor dtemp=dX;
@@ -91,14 +91,14 @@ Tensor DecoderGPT::backward(Tensor const& dY)
     dX=attn_dropout.backward(dX);
     dX=Wo.backward(dX);
   
-    Tensor dQ=Tensor::zeros(cached_Q.shape),dK=Tensor::zeros(cached_K.shape),dV=Tensor::zeros(cached_V.shape);
+    Tensor dQ=Tensor::zeros(cached_Q.shape,cached_Q.dtype()),dK=Tensor::zeros(cached_K.shape,cached_K.dtype()),dV=Tensor::zeros(cached_V.shape,cached_V.dtype());
     masked_attention_backward(dX,cached_Q,cached_K,cached_V,cached_S,dQ,dK,dV,heads);
   
     dQ=Wq.backward(dQ);dK=Wk.backward(dK);dV=Wv.backward(dV);
     dX=add(add(dQ,dK),dV);
     
-    Tensor ln1_dx=Tensor::zeros(dX.shape);
-    layernorm_backward(dX.get_data(),cached_X.get_data(),g1.get_data(),dg1.get_data(),db1.get_data(),ln1_dx.get_data(),dY.total_elements()/dmodel,dmodel);
+    Tensor ln1_dx=Tensor::zeros(dX.shape,dX.dtype());
+    layernorm_backward(dX,cached_X,g1,dg1,db1,ln1_dx,dY.total_elements()/dmodel,dmodel);
     
     dX=add(dtemp,ln1_dx);
     return dX;

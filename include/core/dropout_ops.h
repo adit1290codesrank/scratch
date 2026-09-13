@@ -1,4 +1,5 @@
 #pragma once
+#include "tensor.h"
 
-void dropout_forward_gpu(const float* X,float* Y,float* mask,float p,int size,unsigned int seed);
-void dropout_backward_gpu(const float* dY,float* dX,const float* mask,float p,int size);
+void dropout_forward_gpu(const Tensor& X,Tensor& Y,Tensor& mask,float p,unsigned int seed);
+void dropout_backward_gpu(const Tensor& dY,Tensor& dX,const Tensor& mask,float p);

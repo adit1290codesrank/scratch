@@ -1,4 +1,5 @@
 #include "../../../include/core/memory_ops.h"
+#include "../../../include/core/dtype_ops.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
 #include <curand.h>
@@ -19,18 +20,20 @@ void raw_zero_malloc(void *ptr, size_t bytes)
     if(err!=cudaSuccess) throw std::runtime_error("cudaMemset failed");
 }
 
-__global__ void one_kernel(float* ptr,int total)
+template<typename T>
+__global__ void one_kernel(T* ptr,int total)
 {
     int index=blockDim.x*blockIdx.x+threadIdx.x;
-    if(index<total) ptr[index]=1.0f;
+    if(index<total) ptr[index]=from_float<T>(1.0f);
 }
 
-void raw_one_malloc(void *ptr, size_t bytes)
+void raw_one_malloc(void *ptr, size_t count, DType dt)
 {
-    int total=bytes/sizeof(float);
+    int total=(int)count;
     int threads=256;
     int blocks=(threads+total-1)/threads;
-    one_kernel<<<blocks,threads>>>((float*)ptr,total);
+    if(dt==DType::F32) one_kernel<float><<<blocks,threads>>>((float*)ptr,total);
+    else one_kernel<__nv_bfloat16><<<blocks,threads>>>((__nv_bfloat16*)ptr,total);
 }
 
 void raw_copy_malloc(void *dest,const void *src,size_t bytes)

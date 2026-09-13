@@ -1,8 +1,7 @@
 #pragma once
 #include <memory>
 #include <vector>
-
-enum class DType { F32, BF16 };
+#include "dtype.h"
 
 class Tensor
 {
@@ -33,8 +32,8 @@ class Tensor
         float *get_data() const {return (float*)data.get();}
 
         Tensor reshape(std::vector<int> shape) const;
-        static Tensor zeros(std::vector<int> shape);//belongs to class not object
-        static Tensor ones(std::vector<int> shape);
+        static Tensor zeros(std::vector<int> shape, DType dt=DType::F32);//belongs to class not object
+        static Tensor ones(std::vector<int> shape, DType dt=DType::F32);
         static Tensor randn(std::vector<int> shape,float mean,float std);
         Tensor operator*(const Tensor& other) const;
         Tensor operator+(const Tensor& other) const;

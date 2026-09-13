@@ -48,8 +48,8 @@ Tensor Encoder::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
 
-    Tensor Y=Tensor::zeros(X.shape);
-    layernorm_forward(X.get_data(),g1.get_data(),b1.get_data(),Y.get_data(),X.rows(),dmodel);
+    Tensor Y=Tensor::zeros(X.shape,X.dtype());
+    layernorm_forward(X,g1,b1,Y,X.rows(),dmodel);
 
     this->cached_Q=Wq.forward(Y);
     this->cached_K=Wk.forward(Y);
@@ -62,7 +62,7 @@ Tensor Encoder::forward(const Tensor& X,const Tensor* pad_mask)
     Y=add(Y,X);
 
     this->cached_temp=Y;
-    layernorm_forward(this->cached_temp.get_data(),g2.get_data(),b2.get_data(),Y.get_data(),Y.rows(),dmodel);
+    layernorm_forward(this->cached_temp,g2,b2,Y,Y.rows(),dmodel);
 
     Y=FFN1.forward(Y);
     relu_forward(Y);
@@ -83,7 +83,7 @@ Tensor Encoder::backward(Tensor const& dY)
     relu_backward(dX,this->cached_relu,temp);
     dX=FFN1.backward(temp);
   
-    layernorm_backward(dX.get_data(),cached_temp.get_data(),g2.get_data(),dg2.get_data(),db2.get_data(),temp.get_data(),dY.rows(),dmodel);
+    layernorm_backward(dX,cached_temp,g2,dg2,db2,temp,dY.rows(),dmodel);
     dX=add(dY,temp);
   
     Tensor dtemp=dX;
@@ -97,7 +97,7 @@ Tensor Encoder::backward(Tensor const& dY)
     dQ=Wq.backward(dQ);dK=Wk.backward(dK);dV=Wv.backward(dV);
     dX=add(add(dQ,dK),dV);
   
-    layernorm_backward(dX.get_data(),cached_X.get_data(),g1.get_data(),dg1.get_data(),db1.get_data(),temp.get_data(),dY.rows(),dmodel);
+    layernorm_backward(dX,cached_X,g1,dg1,db1,temp,dY.rows(),dmodel);
     dX=add(dtemp,temp);
   
     return dX;

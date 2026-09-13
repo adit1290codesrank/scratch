@@ -29,7 +29,7 @@ CU_OBJS := $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(CU_SRCS))
 MAIN_SRC ?= main.cpp
 TARGET ?= main
 
-.PHONY: all clean bpe_train gpt_train gpt_chat gpt_gen
+.PHONY: all clean bpe_train gpt_train gpt_chat gpt_gen bf16_adam_test
 
 all: $(TARGET)
 
@@ -47,6 +47,9 @@ gpt_chat: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_chat.cpp
 
 gpt_gen: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_gen.cpp
 	$(NVCC) $(NVCCFLAGS) scripts/gpt_gen.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
+
+bf16_adam_test: $(CPP_OBJS) $(CU_OBJS) scripts/bf16_adam_test.cpp
+	$(NVCC) $(NVCCFLAGS) scripts/bf16_adam_test.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)

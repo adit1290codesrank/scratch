@@ -15,14 +15,14 @@ std::vector<Tensor*> LayerNorm::get_grads() { return {&dg,&db}; }
 Tensor LayerNorm::forward(const Tensor& X,const Tensor* pad_mask)
 {
     this->cached_X=X;
-    Tensor Y=Tensor::zeros(X.shape);
-    layernorm_forward(X.get_data(),g.get_data(),b.get_data(),Y.get_data(),X.total_elements()/dimension,dimension);
+    Tensor Y=Tensor::zeros(X.shape,X.dtype());
+    layernorm_forward(X,g,b,Y,X.total_elements()/dimension,dimension);
     return Y;
 }
 
 Tensor LayerNorm::backward(const Tensor& dY)
 {
-    Tensor dX=Tensor::zeros(cached_X.shape);
-    layernorm_backward(dY.get_data(),cached_X.get_data(),g.get_data(),dg.get_data(),db.get_data(),dX.get_data(),dY.total_elements()/dimension,dimension);
+    Tensor dX=Tensor::zeros(cached_X.shape,cached_X.dtype());
+    layernorm_backward(dY,cached_X,g,dg,db,dX,dY.total_elements()/dimension,dimension);
     return dX;
 }

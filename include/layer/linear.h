@@ -14,7 +14,7 @@ class Linear:public Layer
     
     public:
 
-        Linear(int in,int out,Init init=Init::KAIMING,float custom_std=-1.0f);
+        Linear(int in,int out,Init init=Init::KAIMING,float custom_std=-1.0f,DType dt=DType::F32);
         Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(Tensor const& dY) override;
 

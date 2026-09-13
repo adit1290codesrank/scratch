@@ -22,7 +22,7 @@ class GPT
         Loss* loss;
 
     public:
-        GPT(int vocab_size,int dmodel,int heads,int dff,int layers,int max_seq=1024,float dr=0.1f);
+        GPT(int vocab_size,int dmodel,int heads,int dff,int layers,int max_seq=1024,float dr=0.1f,DType dt=DType::F32);
 
         void compile(Optimizer* opt,Loss* loss);
 

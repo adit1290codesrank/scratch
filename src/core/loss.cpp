@@ -52,7 +52,7 @@ float SparseCrossEntropyLoss::calculate_loss(const Tensor& pred,const Tensor& ta
 
 Tensor SparseCrossEntropyLoss::backward_loss(const Tensor& pred,const Tensor& target)
 {
-    Tensor dY(pred.shape);
+    Tensor dY(pred.shape,pred.dtype());
     sparse_ce_backward(pred,target,dY,this->ignore_index);
     return dY;
 }

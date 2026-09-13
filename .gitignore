@@ -31,3 +31,5 @@ bpe_train
 gpt_train
 gpt_chat
 gpt_gen
+bf16_adam_test
+GPT_MODEL_EXPLAINED.md

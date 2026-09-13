@@ -29,6 +29,7 @@ class Adam:public Optimizer
 
         std::unordered_map<Tensor*,Tensor> m_map;
         std::unordered_map<Tensor*,Tensor> v_map;
+        std::unordered_map<Tensor*,Tensor> master_map;
 
     public:
 

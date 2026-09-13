@@ -15,7 +15,7 @@ class DecoderGPT:public Layer
         Tensor cached_X,cached_S,cached_Q,cached_K,cached_V,cached_temp,cached_relu;
 
     public:
-        DecoderGPT(int dmodel,int heads,int dff,int layers,float dr=0.1f);
+        DecoderGPT(int dmodel,int heads,int dff,int layers,float dr=0.1f,DType dt=DType::F32);
 
         Tensor forward(const Tensor& X,const Tensor* pad_mask=nullptr) override;
         Tensor backward(Tensor const& dY) override;

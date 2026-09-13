@@ -21,17 +21,17 @@ Tensor Tensor::reshape(std::vector<int> new_shape) const
     return temp;
 }
 
-Tensor Tensor::zeros(std::vector<int> shape)
+Tensor Tensor::zeros(std::vector<int> shape, DType dt)
 {
-    Tensor temp(shape);
+    Tensor temp(shape,dt);
     zero_malloc(temp.get_data(),temp.total_bytes());
     return temp;
 }
 
-Tensor Tensor::ones(std::vector<int> shape)
+Tensor Tensor::ones(std::vector<int> shape, DType dt)
 {
-    Tensor temp(shape);
-    one_malloc(temp.get_data(),temp.total_bytes());
+    Tensor temp(shape,dt);
+    one_malloc(temp.get_data(),temp.total_elements(),dt);
     return temp;
 }
 
@@ -51,12 +51,30 @@ Tensor Tensor::clone() const
 
 void Tensor::copy_from_host(const float* host_data) const
 {
-    copy_from_host_malloc(this->get_data(),host_data,this->total_bytes());
+    if(dtype_==DType::F32)
+    {
+        copy_from_host_malloc(this->get_data(),host_data,this->total_bytes());
+    }
+    else
+    {
+        Tensor tmp(shape,DType::F32);
+        tmp.copy_from_host(host_data);
+        cast_tensor(const_cast<Tensor&>(*this),tmp);
+    }
 }
 
 void Tensor::copy_to_host(float* host_data) const
 {
-    copy_to_host_malloc(host_data,this->get_data(),this->total_bytes());
+    if(dtype_==DType::F32)
+    {
+        copy_to_host_malloc(host_data,this->get_data(),this->total_bytes());
+    }
+    else
+    {
+        Tensor tmp(shape,DType::F32);
+        cast_tensor(tmp,*this);
+        tmp.copy_to_host(host_data);
+    }
 }
 
 Tensor Tensor::operator*(const Tensor& other) const{return multiply(*this,false,other,false);};

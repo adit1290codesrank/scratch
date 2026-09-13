@@ -23,6 +23,8 @@ struct Config
 
     int log_every=20,ckpt_every=1000,sample_every=1000;
 
+    bool bf16=false;
+
     std::string tok_path="data/tok.bin";
     std::string ckpt_path="data/ckpt.bin";
     std::string weights_path="data/model.bin";
@@ -64,6 +66,7 @@ static void apply_args(Config& c,int argc,char** argv)
         else if(k=="ckpt_every") c.ckpt_every=std::stoi(v);
         else if(k=="sample_every") c.sample_every=std::stoi(v);
         else if(k=="log_every") c.log_every=std::stoi(v);
+        else if(k=="bf16") c.bf16=(v=="1"||v=="true");
         else std::cerr<<"[train] unknown arg: "<<k<<"\n";
     }
 }
@@ -96,7 +99,7 @@ int main(int argc,char** argv)
     }
     std::cout<<"[train] total_tokens="<<dl.total_tokens()<<" steps/epoch="<<dl.steps_per_epoch()<<"\n";
 
-    GPT model(V,cfg.dmodel,cfg.heads,cfg.dff,cfg.layers,cfg.max_seq,cfg.dropout);
+    GPT model(V,cfg.dmodel,cfg.heads,cfg.dff,cfg.layers,cfg.max_seq,cfg.dropout,cfg.bf16?DType::BF16:DType::F32);
     Adam opt(model.get_layers(),cfg.lr,0.9f,cfg.beta2,1e-8f,cfg.wd);
     SparseCrossEntropyLoss loss_fn;
     model.compile(&opt,&loss_fn);
