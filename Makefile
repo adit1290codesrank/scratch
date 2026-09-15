@@ -29,7 +29,7 @@ CU_OBJS := $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(CU_SRCS))
 MAIN_SRC ?= main.cpp
 TARGET ?= main
 
-.PHONY: all clean bpe_train gpt_train gpt_chat gpt_gen bf16_adam_test lib
+.PHONY: all clean bpe_train gpt_train gpt_train_ir gpt_chat gpt_gen bf16_adam_test lib
 
 all: $(TARGET)
 
@@ -41,6 +41,9 @@ bpe_train: scripts/bpe_train.cpp $(OBJ_DIR)/core/tokenizer.o
 
 gpt_train: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_train.cpp
 	$(NVCC) $(NVCCFLAGS) scripts/gpt_train.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
+
+gpt_train_ir: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_train_ir.cpp
+	$(NVCC) $(NVCCFLAGS) scripts/gpt_train_ir.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
 
 gpt_chat: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_chat.cpp
 	$(NVCC) $(NVCCFLAGS) scripts/gpt_chat.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
