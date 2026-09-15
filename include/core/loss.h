@@ -40,6 +40,7 @@ class SparseCrossEntropyLoss:public Loss
 {
     public:
         int ignore_index;
+        int last_valid_count=0;
         SparseCrossEntropyLoss(int ignore_index = -100);
         float calculate_loss(const Tensor& pred,const Tensor& target) override;
         Tensor backward_loss(const Tensor& pred,const Tensor& target) override;

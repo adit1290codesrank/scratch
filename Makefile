@@ -29,7 +29,7 @@ CU_OBJS := $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(CU_SRCS))
 MAIN_SRC ?= main.cpp
 TARGET ?= main
 
-.PHONY: all clean bpe_train gpt_train gpt_chat gpt_gen bf16_adam_test
+.PHONY: all clean bpe_train gpt_train gpt_chat gpt_gen bf16_adam_test lib
 
 all: $(TARGET)
 
@@ -51,6 +51,9 @@ gpt_gen: $(CPP_OBJS) $(CU_OBJS) scripts/gpt_gen.cpp
 bf16_adam_test: $(CPP_OBJS) $(CU_OBJS) scripts/bf16_adam_test.cpp
 	$(NVCC) $(NVCCFLAGS) scripts/bf16_adam_test.cpp $(CPP_OBJS) $(CU_OBJS) $(LDFLAGS) -o $@
 
+lib: $(CPP_OBJS) $(CU_OBJS)
+	ar rcs libscratch.a $(CPP_OBJS) $(CU_OBJS)
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -60,4 +63,4 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJ_DIR) $(TARGET)
+	rm -rf $(OBJ_DIR) $(TARGET) libscratch.a

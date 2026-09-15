@@ -67,6 +67,37 @@ std::vector<uint16_t> DataLoader::build_dialogue(const std::string& path) const
     return out;
 }
 
+std::vector<uint16_t> DataLoader::build_supervised(const std::string& path,std::vector<uint8_t>& sup) const
+{
+    std::ifstream f(path);
+    if(!f) throw std::runtime_error("cannot open "+path);
+
+    int USER=tok.token_to_id("<|user|>"),BOT=tok.token_to_id("<|bot|>"),EOT=tok.token_to_id("<|endoftext|>");
+    if(USER<0||BOT<0||EOT<0) throw std::runtime_error("tokenizer missing conversational special tokens");
+
+    std::vector<uint16_t> out;
+    std::string line;
+    size_t n=0;
+    while(std::getline(f,line))
+    {
+        size_t tab=line.find('\t');
+        if(tab==std::string::npos) continue;
+        std::string prompt=line.substr(0,tab),completion=line.substr(tab+1);
+
+        out.push_back((uint16_t)USER);sup.push_back(0);
+        for(int t:tok.encode(" "+prompt)){out.push_back((uint16_t)t);sup.push_back(0);}
+
+        out.push_back((uint16_t)BOT);sup.push_back(1);
+        for(int t:tok.encode(" "+completion)){out.push_back((uint16_t)t);sup.push_back(1);}
+
+        out.push_back((uint16_t)EOT);sup.push_back(0);
+
+        if(++n%5000==0) std::cout<<"[data] "<<path<<": "<<n<<" examples, "<<out.size()<<" tokens\r"<<std::flush;
+    }
+    std::cout<<"[data] "<<path<<": "<<n<<" examples, "<<out.size()<<" tokens\n";
+    return out;
+}
+
 std::vector<uint16_t> DataLoader::load_or_build(const std::string& txt,const std::string& cache,bool dialogue) const
 {
     std::ifstream cf(cache,std::ios::binary);
@@ -99,7 +130,7 @@ std::vector<uint16_t> DataLoader::load_or_build(const std::string& txt,const std
 void DataLoader::add_source(std::vector<uint16_t>&& toks,double weight)
 {
     if((long long)toks.size()<(long long)block+1) throw std::runtime_error("corpus has fewer than block+1 tokens");
-    sources.push_back({std::move(toks),weight});
+    sources.push_back({std::move(toks),{},weight});
     weights.push_back(weight);
 }
 
@@ -111,6 +142,46 @@ void DataLoader::add_text(const std::string& txt,const std::string& cache,double
 void DataLoader::add_dialogue(const std::string& txt,const std::string& cache,double weight)
 {
     add_source(load_or_build(txt,cache,true),weight);
+}
+
+void DataLoader::add_supervised(const std::string& txt,const std::string& cache,double weight)
+{
+    std::vector<uint16_t> toks;
+    std::vector<uint8_t> sup;
+    bool loaded=false;
+
+    std::ifstream cf(cache,std::ios::binary);
+    if(cf)
+    {
+        char m[4]={0,0,0,0};int32_t v=0;uint64_t n=0;
+        cf.read(m,4);cf.read((char*)&v,4);cf.read((char*)&n,8);
+        if(cf&&m[0]=='D'&&m[1]=='L'&&m[2]=='0'&&m[3]=='2'&&v==tok.size())
+        {
+            toks.resize(n);sup.resize(n);
+            cf.read((char*)toks.data(),(std::streamsize)(n*2));
+            cf.read((char*)sup.data(),(std::streamsize)n);
+            if(cf){std::cout<<"[data] cache "<<cache<<" ("<<n<<" tokens)\n";loaded=true;}
+        }
+        if(!loaded) std::cout<<"[data] cache "<<cache<<" stale or invalid, rebuilding\n";
+    }
+
+    if(!loaded)
+    {
+        toks=build_supervised(txt,sup);
+        std::ofstream of(cache,std::ios::binary);
+        if(of)
+        {
+            const char m[4]={'D','L','0','2'};int32_t v=tok.size();uint64_t n=toks.size();
+            of.write(m,4);of.write((char*)&v,4);of.write((char*)&n,8);
+            of.write((const char*)toks.data(),(std::streamsize)(toks.size()*2));
+            of.write((const char*)sup.data(),(std::streamsize)sup.size());
+        }
+        else std::cerr<<"[data] warning: cannot write cache "<<cache<<"\n";
+    }
+
+    if((long long)toks.size()<(long long)block+1) throw std::runtime_error("corpus has fewer than block+1 tokens");
+    sources.push_back({std::move(toks),std::move(sup),weight});
+    weights.push_back(weight);
 }
 
 void DataLoader::next(Tensor& X,Tensor& Y)
@@ -126,7 +197,8 @@ void DataLoader::next(Tensor& X,Tensor& Y)
         for(int t=0;t<block;t++)
         {
             hX[b*block+t]=(float)s.toks[o+t];
-            hY[b*block+t]=(float)s.toks[o+t+1];
+            if(s.supervise.empty()||s.supervise[o+t]) hY[b*block+t]=(float)s.toks[o+t+1];
+            else hY[b*block+t]=-100.0f;
         }
     }
     X.copy_from_host(hX.data());
